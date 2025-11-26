@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/user")
 public class LoginController {
 
     @Autowired
@@ -43,8 +43,19 @@ public class LoginController {
     }
 
     @GetMapping("/login")
-    public String login() {
-        return "Login successful!";
+    public String login(@RequestParam String username, @RequestParam String password) {
+        try {
+            User user = userService.login(username, password);
+            if (user != null) {
+                return "Login successful!";
+            } else {
+                return "Invalid username or password.";
+            }
+        } catch (Exception e) {
+            return "An error occurred during login.";
+        }
+
+
     }
 
     @GetMapping("/logout")

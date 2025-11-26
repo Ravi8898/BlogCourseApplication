@@ -51,5 +51,14 @@ public class UserServiceImpl implements UserService {
         if (username == null) return Optional.empty();
         return userRepository.findByUsername(username.trim());
     }
+
+    @Override
+    public User login(String username, String password) {
+        Optional<User> userOpt = findByUsername(username);
+        if (userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
+            return userOpt.get();
+        }
+        return null;
+    }
 }
 
