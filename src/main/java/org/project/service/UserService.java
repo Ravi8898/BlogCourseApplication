@@ -1,11 +1,12 @@
 package org.project.service;
 
+import org.project.dto.responseDto.RegisterResponse;
 import org.project.model.User;
-import org.project.request.RegisterRequest;
+import org.project.dto.requestDto.RegisterRequest;
 
 import java.util.Optional;
 
 public interface UserService {
-    User register(RegisterRequest req);
+    RegisterResponse register(RegisterRequest req);
     Optional<User> findByUsername(String username);
 }
