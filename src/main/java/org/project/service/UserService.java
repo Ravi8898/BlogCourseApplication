@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface UserService {
     User register(RegisterRequest req);
     Optional<User> findByUsername(String username);
+
+    User login(String username, String password);
 }
