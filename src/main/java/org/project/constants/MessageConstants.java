@@ -7,6 +7,7 @@ public class MessageConstants {
 
     public static final String USERNAME_PASSWORD_REQUIRED = "Username and password are required.";
     public static final String USERNAME_EXISTS = "Username already exists.";
+    public static final String USER_NOT_FOUND = "User not found.";
     public static final String REGISTRATION_SUCCESSFUL = "Registration successful.";
 
     public static final String LOGIN_SUCCESS = "Login successful!";

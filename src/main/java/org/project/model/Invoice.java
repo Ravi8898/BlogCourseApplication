@@ -3,29 +3,25 @@ package org.project.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
-
+import java.util.Date;
 
 @Entity
-@Table(name = "users")
+@Table(name = "invoice")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
-
+public class Invoice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String username;
+    @Column(nullable = false)
+    private Double amount;
 
     @Column(nullable = false)
-    private String password; // NOTE: hash passwords in real apps
+    private String assignedTo;
 
-    private String email;
-
-    private String isActive;
+    private Date invoiceDate;
 }

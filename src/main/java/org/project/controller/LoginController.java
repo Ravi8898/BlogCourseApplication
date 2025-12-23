@@ -1,32 +1,37 @@
 package org.project.controller;
 
 import static org.project.constants.MessageConstants.*;
+
+import org.project.dto.requestDto.LoginRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.RegisterResponse;
-import org.project.model.User;
 import org.project.dto.requestDto.RegisterRequest;
-import org.project.service.UserService;
+import org.project.service.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(
+        origins = "*",
+        allowedHeaders = "*",
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS}
+)
 public class LoginController {
 
     @Autowired
-    private UserService userService;
+    private LoginService loginService;
 
-    public LoginController(UserService userService) {
-        this.userService = userService;
+    public LoginController(LoginService loginService) {
+        this.loginService = loginService;
     }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@RequestBody RegisterRequest request) {
         try {
-            RegisterResponse response = userService.register(request);
+            RegisterResponse response = loginService.register(request);
 
             if (response == null) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -42,12 +47,36 @@ public class LoginController {
         }
     }
 
-    @GetMapping("/login")
-    public String login() {
-        return "Login successful!";
+//    @PostMapping("/login")
+//    public String login(@RequestBody LoginRequest request) {
+//
+//        Optional<User> user = userService.findByUsername(request.getUsername());
+//        if (user.isEmpty() || !user.get().getPassword().equals(request.getPassword())) {
+//            return "Invalid username or password.";
+//        }
+//        return "Login successful!";
+//    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<RegisterResponse>> login(@RequestBody LoginRequest request) {
+
+        ApiResponse<RegisterResponse> response = loginService.login(request);
+
+        if (!response.getStatus().equalsIgnoreCase("SUCCESS")) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
+
 
     @GetMapping("/logout")
     public String logout() { return "Logout successful!"; }
 
+//    @GetMapping("getAllUsers")
+//    public ResponseEntity<ApiResponse<UserResponse>> getAllUsers(){
+//
+//    }
 }
