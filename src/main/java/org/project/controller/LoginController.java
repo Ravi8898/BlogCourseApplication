@@ -7,9 +7,12 @@ import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.RegisterResponse;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.service.LoginService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.javapoet.ClassName;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +26,9 @@ public class LoginController {
 
     @Autowired
     private LoginService loginService;
+
+    private static final Logger log =
+            LoggerFactory.getLogger(ClassName.class);
 
     public LoginController(LoginService loginService) {
         this.loginService = loginService;
@@ -47,22 +53,12 @@ public class LoginController {
         }
     }
 
-//    @PostMapping("/login")
-//    public String login(@RequestBody LoginRequest request) {
-//
-//        Optional<User> user = userService.findByUsername(request.getUsername());
-//        if (user.isEmpty() || !user.get().getPassword().equals(request.getPassword())) {
-//            return "Invalid username or password.";
-//        }
-//        return "Login successful!";
-//    }
-
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<RegisterResponse>> login(@RequestBody LoginRequest request) {
-
+        log.info("Login request received for username: {}", request.getUsername());
         ApiResponse<RegisterResponse> response = loginService.login(request);
 
-        if (!response.getStatus().equalsIgnoreCase("SUCCESS")) {
+        if (!response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(response);

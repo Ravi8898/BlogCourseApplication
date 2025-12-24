@@ -10,6 +10,7 @@ import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.security.JwtUtil;
 import org.project.service.LoginService;
+import org.project.service.UserTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import static org.project.constants.MessageConstants.*;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import static org.project.constants.MessageConstants.*;
 
@@ -59,16 +61,18 @@ public class LoginServiceImpl implements LoginService {
     private final PasswordEncoder passwordEncoder;
 
     private final JwtUtil jwtUtil;
+    private final UserTokenService userTokenService;
 
     /**
      * Constructor-based dependency injection
      */
     public LoginServiceImpl(AuthenticationManager authenticationManager,
-                            UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+                            UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserTokenService userTokenService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.userTokenService = userTokenService;
     }
 
     /**
@@ -125,10 +129,12 @@ public class LoginServiceImpl implements LoginService {
 
             // Generate JWT token (if applicable)
             String token = jwtUtil.generateToken(user.getUsername());
+            //Save token with expiry
+            userTokenService.saveToken(user, token, LocalDateTime.now().plusHours(1));
+
             // Prepare response DTO
             RegisterResponse response = new RegisterResponse(user.getId(),
                             user.getUsername(),user.getEmail(), user.getPhoneNumber(), token);
-
             // Return success response
             return new ApiResponse<>(SUCCESS, LOGIN_SUCCESS, HttpStatus.OK.value(), response);
         } catch (BadCredentialsException ex) {
@@ -146,30 +152,20 @@ public class LoginServiceImpl implements LoginService {
 
         ApiResponse<RegisterResponse> response = new ApiResponse<>();
         try{
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                response.setStatus(FAILED);
-                response.setMessage(INVALID_TOKEN);
-                response.setStatusCode(HttpStatus.BAD_REQUEST.value());
-                response.setData(null);
-
-                return response;
-            }
             String token = authHeader.substring(7);
-
             // invalidate JWT
-            jwtUtil.blacklistToken(token);
-            response.setStatus("SUCCESS");
+            userTokenService.revokeToken(token);
+
+            response.setStatus(SUCCESS);
             response.setMessage(MessageConstants.LOGOUT_SUCCESS);
             response.setStatusCode(HttpStatus.OK.value());
             response.setData(null);
         } catch (Exception e) {
-            response.setStatus(LOGOUT_FAILED);
-            response.setMessage(SOMETHING_WENT_WRONG);
+            response.setStatus(FAILED);
+            response.setMessage(LOGOUT_FAILED);
             response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
             response.setData(null);
         }
-
-
         return response;
     }
 }

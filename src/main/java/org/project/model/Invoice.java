@@ -2,6 +2,7 @@ package org.project.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.project.model.audit.BaseAuditEntity;
 
 import java.util.Date;
 
@@ -12,7 +13,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Invoice {
+public class Invoice extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

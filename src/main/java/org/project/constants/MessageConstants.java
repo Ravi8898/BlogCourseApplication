@@ -22,6 +22,10 @@ public class MessageConstants {
     public static final String INVALID_TOKEN = "Invalid token.";
     public static final String LOGOUT_SUCCESS = "Logout successful.";
     public static final String LOGOUT_FAILED = "Logout failed.";
+    public static final String AUTH_HEADER_MISSING = "Authorization header missing";
+    public static final String TOKEN_EXPIRED = "Token expired";
+    public static final String TOKEN_INVALIDATED = "Token has been invalidated";
+    public static final String ACCESS_DENIED = "Access denied";
 
 
 }
