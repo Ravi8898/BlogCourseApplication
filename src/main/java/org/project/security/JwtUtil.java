@@ -3,7 +3,9 @@ package org.project.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -14,11 +16,18 @@ import io.jsonwebtoken.ExpiredJwtException;
 @Component
 public class JwtUtil {
 
-    // Secure 256-bit key
-    private static final Key SECRET_KEY =
-            Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final Key secretKey;
+    private final long expirationMs;
 
-    private static final long JWT_EXPIRATION_MS = 1000 * 60 * 60; // 1 hour
+    public JwtUtil(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration.ms}") long expirationMs) {
+
+        this.secretKey = Keys.hmacShaKeyFor(
+                Decoders.BASE64.decode(secret)
+        );
+        this.expirationMs = expirationMs;
+    }
 
     // Generate JWT
     public String generateToken(String username) {
@@ -27,39 +36,30 @@ public class JwtUtil {
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + JWT_EXPIRATION_MS)
+                        new Date(System.currentTimeMillis() + expirationMs)
                 )
-                .signWith(SECRET_KEY)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Extract username from token
+    // Extract username
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
-    // Check JWT expiry (CLAIM-LEVEL)
+    // JWT claim expiry check
     public boolean isJwtExpired(String token) {
-        try {
-            return extractAllClaims(token)
-                    .getExpiration()
-                    .before(new Date());
-        } catch (ExpiredJwtException ex) {
-            return true;
-        }
+
+        return extractAllClaims(token)
+                .getExpiration()
+                .before(new Date());
     }
 
-    // Validate JWT cryptographically + username match
-    public boolean validateJwtToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername())
-                && !isJwtExpired(token);
-    }
-
-    // Internal helper
+    // 🔒 Internal helper
     private Claims extractAllClaims(String token) {
+
         return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(secretKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
