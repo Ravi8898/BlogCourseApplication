@@ -11,4 +11,6 @@ import java.util.Optional;
 public interface LoginService {
     RegisterResponse register(RegisterRequest req);
     ApiResponse<RegisterResponse> login(LoginRequest request);
+
+    ApiResponse<RegisterResponse> logout(String authorizationHeader);
 }

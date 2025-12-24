@@ -1,4 +1,4 @@
-package org.project.service;
+package org.project.security;
 
 import org.project.model.User;
 import org.project.repository.UserRepository;

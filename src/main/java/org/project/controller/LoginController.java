@@ -71,12 +71,16 @@ public class LoginController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<RegisterResponse>> logout(
+            @RequestHeader("Authorization") String authorizationHeader) {
 
-    @GetMapping("/logout")
-    public String logout() { return "Logout successful!"; }
+        ApiResponse<RegisterResponse> response =
+                loginService.logout(authorizationHeader);
 
-//    @GetMapping("getAllUsers")
-//    public ResponseEntity<ApiResponse<UserResponse>> getAllUsers(){
-//
-//    }
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+    }
+
 }

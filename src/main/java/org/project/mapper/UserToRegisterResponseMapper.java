@@ -16,6 +16,7 @@ public class UserToRegisterResponseMapper implements Mapper<User, RegisterRespon
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
+        response.setPhoneNumber(user.getPhoneNumber());
         return response;
     }
 }
