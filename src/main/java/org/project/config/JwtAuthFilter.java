@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.project.security.JwtUtil;
 import org.project.security.SecurityResponseUtil;
 import org.project.service.UserTokenService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,15 +37,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.responseUtil = responseUtil;
         this.userTokenService = userTokenService;
     }
-    private static final List<String> PUBLIC_URLS = List.of(
-            "/api/login",
-            "/api/register"
-    );
+
+    @Value("${security.public.urls}")
+    private List<String> publicUrls;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return PUBLIC_URLS.contains(path);
+        return publicUrls.contains(request.getServletPath());
     }
 
     @Override

@@ -24,15 +24,14 @@ public class UserTokenController {
     @Autowired
     private UserTokenService userTokenService;
 
-
     @PostMapping("/revokeAllTokensByUserId")
     public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(@RequestBody UserTokenRequest userTokenRequest) {
-        ApiResponse<?> response= UserTokenService.revokeAllTokensByUserId(userTokenRequest);
-        if(response.getStatus().equalsIgnoreCase(SUCCESS)){
+        ApiResponse<?> response = userTokenService.revokeAllTokensByUserId(userTokenRequest);
+        if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity.status(HttpStatus.OK)
                     .body(response);
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
-    }
+}
