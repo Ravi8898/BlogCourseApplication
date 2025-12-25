@@ -60,15 +60,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
         String token = authHeader.substring(7);
-        if (!userTokenService.isTokenValid(token)) {
-            responseUtil.writeResponse(response, FAILED,
-                    TOKEN_INVALIDATED, HttpStatus.UNAUTHORIZED.value());
-            return;
-        }
 
         if (userTokenService.isTokenExpired(token)) {
             responseUtil.writeResponse(response, FAILED,
                     TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED.value());
+            return;
+        } else if (userTokenService.isTokenValid(token)) {
+            responseUtil.writeResponse(response, FAILED,
+                    TOKEN_INVALIDATED, HttpStatus.UNAUTHORIZED.value());
             return;
         }
 

@@ -26,7 +26,7 @@ public class UserToken extends BaseAuditEntity {
     @Column(length = 1000, nullable = false)
     private String token;
 
-    private boolean revoked;
+    private String revoked;
 
     private LocalDateTime expiryTime;
 }

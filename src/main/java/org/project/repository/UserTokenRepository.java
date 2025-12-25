@@ -14,12 +14,13 @@ import java.util.Optional;
 public interface UserTokenRepository
         extends JpaRepository<UserToken, Long> {
 
-    Optional<UserToken> findByTokenAndRevokedFalse(String token);
+    Optional<UserToken> findByTokenAndRevoked(String token, String revoked);
+    Optional<UserToken> findByToken(String token);
 
     @Modifying
     @Query("""
         UPDATE UserToken ut
-        SET ut.revoked = true
+        SET ut.revoked = 'Y'
         WHERE ut.userId = :userId
         """)
     void revokeAllTokensByUserId(@Param("userId") Long userId);

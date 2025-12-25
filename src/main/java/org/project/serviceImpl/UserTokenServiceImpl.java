@@ -25,7 +25,7 @@ public class UserTokenServiceImpl implements UserTokenService {
         UserToken userToken = new UserToken();
         userToken.setUserId(user.getId());
         userToken.setToken(token);
-        userToken.setRevoked(false);
+        userToken.setRevoked("N");
         userToken.setExpiryTime(expiryTime);
 
         userTokenRepository.save(userToken);
@@ -33,19 +33,10 @@ public class UserTokenServiceImpl implements UserTokenService {
 
     @Override
     public boolean isTokenValid(String token) {
-        return userTokenRepository
-                .findByTokenAndRevokedFalse(token)
-                .map(userToken ->
-                        userToken.getExpiryTime()
-                                .isAfter(LocalDateTime.now()))
-                .orElse(false);
-    }
-
-    @Override
-    public boolean isTokenExpired(String token) {
+        System.out.println("Token :: "+userTokenRepository.findByTokenAndRevoked(token, "N"));
 
         return userTokenRepository
-                .findByTokenAndRevokedFalse(token)
+                .findByTokenAndRevoked(token, "N")
                 .map(userToken ->
                         userToken.getExpiryTime()
                                 .isBefore(LocalDateTime.now()))
@@ -53,11 +44,20 @@ public class UserTokenServiceImpl implements UserTokenService {
     }
 
     @Override
-    public void revokeToken(String token) {
+    public boolean isTokenExpired(String token) {
+        return userTokenRepository
+                .findByToken(token)
+                .map(userToken ->
+                        userToken.getExpiryTime()
+                                .isBefore(LocalDateTime.now()))
+                .orElse(false);
+    }
 
-        userTokenRepository.findByTokenAndRevokedFalse(token)
+    @Override
+    public void revokeToken(String token) {
+        userTokenRepository.findByTokenAndRevoked(token, "N")
                 .ifPresent(userToken -> {
-                    userToken.setRevoked(true);
+                    userToken.setRevoked("Y");
                     userTokenRepository.save(userToken);
                 });
     }

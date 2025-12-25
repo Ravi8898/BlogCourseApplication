@@ -149,7 +149,6 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public ApiResponse<RegisterResponse> logout(String authHeader) {
-
         ApiResponse<RegisterResponse> response = new ApiResponse<>();
         try{
             String token = authHeader.substring(7);
