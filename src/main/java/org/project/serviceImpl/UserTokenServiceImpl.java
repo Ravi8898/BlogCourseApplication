@@ -1,23 +1,29 @@
 package org.project.serviceImpl;
 
+import org.project.dto.requestDto.UserTokenRequest;
+import org.project.dto.responseDto.ApiResponse;
+import org.project.dto.responseDto.RegisterResponse;
 import org.project.model.User;
 import org.project.model.UserToken;
 import org.project.repository.UserTokenRepository;
 import org.project.service.UserTokenService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.project.constants.MessageConstants.*;
 
 @Service
 @Transactional
 public class UserTokenServiceImpl implements UserTokenService {
 
-    private final UserTokenRepository userTokenRepository;
-
-    public UserTokenServiceImpl(UserTokenRepository userTokenRepository) {
-        this.userTokenRepository = userTokenRepository;
-    }
+    @Autowired
+    private UserTokenRepository userTokenRepository;
 
     @Override
     public void saveToken(User user, String token, LocalDateTime expiryTime) {
@@ -65,6 +71,28 @@ public class UserTokenServiceImpl implements UserTokenService {
     @Override
     public void revokeAllTokensForUser(Long userId) {
         userTokenRepository.revokeAllTokensByUserId(userId);
+    }
+    @Override
+    public ApiResponse<?> revokeAllTokensByUserId(UserTokenRequest userTokenRequest) {
+        ApiResponse<?> response;
+        try {
+            Optional<List<UserToken>> optionalList = userTokenRepository.findByUserId(userTokenRequest.getUserId());
+            if (optionalList.isPresent()) {
+                List<UserToken> userTokenList= optionalList.get();
+                Optional<UserToken> currentToken=  userTokenList.stream().filter(userToken -> userToken.getToken().equals(userTokenRequest.getCurrentToken())).findFirst();
+                currentToken.ifPresent(userTokenList::remove);
+                userTokenList.forEach(userToken ->userToken.setRevoked("Y"));
+                userTokenRepository.saveAll(userTokenList);
+                response = new ApiResponse<>(SUCCESS, ALL_SESSION_LOGOUT_SUCCESS, HttpStatus.OK.value(), null);
+            }
+            else {
+                response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
+            }
+
+        }catch (Exception ex){
+            response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED_500, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
+        }
+        return response;
     }
 }
 

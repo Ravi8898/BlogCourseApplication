@@ -16,7 +16,7 @@ import org.springframework.javapoet.ClassName;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 @CrossOrigin(
         origins = "*",
         allowedHeaders = "*",
@@ -29,10 +29,6 @@ public class LoginController {
 
     private static final Logger log =
             LoggerFactory.getLogger(ClassName.class);
-
-    public LoginController(LoginService loginService) {
-        this.loginService = loginService;
-    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@RequestBody RegisterRequest request) {
