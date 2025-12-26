@@ -26,7 +26,7 @@ public class UserServiceImpl implements UserService {
 
         ApiResponse<UserResponse> response;
         try{
-            Optional<User> userOptional = userRepository.findById(userId);
+            Optional<User> userOptional = userRepository.findByIdAndIsActive(userId, "Y");;
             if(userOptional.isPresent()){
                 User user = userOptional.get();
                 UserResponse userResponse = new UserResponse(
@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
         ApiResponse<List<UserResponse>> response;
 
         try {
-            List<User> users = userRepository.findAll();
+            List<User> users = userRepository.findByIsActive("Y");
 
             if (users.isEmpty()) {
                 return new ApiResponse<>(
@@ -83,12 +83,32 @@ public class UserServiceImpl implements UserService {
         } catch (Exception ex) {
             response = new ApiResponse<>(
                     FAILED,
-                    SOMETHING_WENT_WRONG,
+                    FETCH_USERS_FAILED,
                     HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     null
             );
         }
         return response;
+    }
+    @Override
+    public ApiResponse<Void> deleteUserById(Long userId) {
+        int updated = userRepository.deactivateUserById(userId);
+
+        if (updated == 0) {
+            return new ApiResponse<>(
+                    FAILED,
+                    DELETE_USER_FAILED,
+                    HttpStatus.NOT_FOUND.value(),
+                    null
+            );
+        }
+
+        return new ApiResponse<>(
+                SUCCESS,
+                DELETE_USER_SUCCESS,
+                HttpStatus.OK.value(),
+                null
+        );
     }
 
 
