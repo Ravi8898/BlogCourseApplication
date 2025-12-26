@@ -33,7 +33,7 @@ public interface UserTokenRepository
         """)
     void deleteExpiredTokens(@Param("now") LocalDateTime now);
 
-    Optional<List<UserToken>> findByUserId(Long userId);
+    List<UserToken> findByUserId(Long userId);
 }
 
 

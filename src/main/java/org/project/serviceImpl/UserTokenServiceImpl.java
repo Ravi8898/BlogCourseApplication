@@ -76,9 +76,8 @@ public class UserTokenServiceImpl implements UserTokenService {
     public ApiResponse<?> revokeAllTokensByUserId(UserTokenRequest userTokenRequest) {
         ApiResponse<?> response;
         try {
-            Optional<List<UserToken>> optionalList = userTokenRepository.findByUserId(userTokenRequest.getUserId());
-            if (optionalList.isPresent()) {
-                List<UserToken> userTokenList= optionalList.get();
+            List<UserToken> userTokenList = userTokenRepository.findByUserId(userTokenRequest.getUserId());
+            if (!userTokenList.isEmpty()) {
                 Optional<UserToken> currentToken=  userTokenList.stream().filter(userToken -> userToken.getToken().equals(userTokenRequest.getCurrentToken())).findFirst();
                 currentToken.ifPresent(userTokenList::remove);
                 userTokenList.forEach(userToken ->userToken.setRevoked("Y"));

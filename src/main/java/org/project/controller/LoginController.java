@@ -53,6 +53,7 @@ public class LoginController {
     public ResponseEntity<ApiResponse<RegisterResponse>> login(@RequestBody LoginRequest request) {
         log.info("Login request received for username: {}", request.getUsername());
         ApiResponse<RegisterResponse> response = loginService.login(request);
+        log.info("Response from LoginServiceImpl: {} for username: {}",response, request.getUsername());
 
         if (!response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity

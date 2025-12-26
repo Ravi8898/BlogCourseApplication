@@ -19,6 +19,7 @@ public class UserToken extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="userTokenId")
     private Long id;
 
     private Long userId;
