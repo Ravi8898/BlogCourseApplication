@@ -10,7 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.project.constants.MessageConstants.*;
 @Service
@@ -24,9 +26,9 @@ public class UserServiceImpl implements UserService {
 
         ApiResponse<UserResponse> response;
         try{
-            Optional<User> userOpt = userRepository.findById(id);
-            if(userOpt.isPresent()){
-                User user = userOpt.get();
+            Optional<User> userOptional = userRepository.findById(id);
+            if(userOptional.isPresent()){
+                User user = userOptional.get();
                 UserResponse userResponse = new UserResponse(
                         user.getId(),
                         user.getUsername(),
@@ -40,10 +42,54 @@ public class UserServiceImpl implements UserService {
                 response = new ApiResponse<>(FAILED, USER_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
             }
         }catch (Exception ex){
-            response = new ApiResponse<>(FAILED, USER_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
+            response = new ApiResponse<>(FAILED, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         return response;
 
     }
+    @Override
+    public ApiResponse<List<UserResponse>> getAllUsers() {
+
+        ApiResponse<List<UserResponse>> response;
+
+        try {
+            List<User> users = userRepository.findAll();
+
+            if (users.isEmpty()) {
+                return new ApiResponse<>(
+                        FAILED,
+                        NO_USERS_FOUND,
+                        HttpStatus.NO_CONTENT.value(),
+                        List.of()
+                );
+            }
+
+            List<UserResponse> userResponses = users.stream()
+                    .map(user -> new UserResponse(
+                            user.getId(),
+                            user.getUsername(),
+                            user.getEmail(),
+                            user.getPhoneNumber()
+                    ))
+                    .collect(Collectors.toList());
+
+            response = new ApiResponse<>(
+                    SUCCESS,
+                    FETCH_USERS_SUCCESS,
+                    HttpStatus.OK.value(),
+                    userResponses
+            );
+
+        } catch (Exception ex) {
+            response = new ApiResponse<>(
+                    FAILED,
+                    SOMETHING_WENT_WRONG,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
+        return response;
+    }
+
 
 }

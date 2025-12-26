@@ -31,4 +31,10 @@ public class MessageConstants {
     public static final String ALL_SESSION_LOGOUT_SUCCESS = "All sessions logout successfully.";
     public static final String ALL_SESSION_LOGOUT_FAILED = "All sessions logout failed.";
     public static final String ALL_SESSION_LOGOUT_FAILED_500 = "All sessions logout failed. Something went wrong.";
+
+    //User messages
+    public static final String FETCH_USERS_SUCCESS ="Users fetched successfully.";
+    public static final String FETCH_USERS_FAILED = "Failed to fetch users.";
+    public static final String NO_USERS_FOUND = "No users found.";
+
 }
