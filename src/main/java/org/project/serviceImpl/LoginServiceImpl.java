@@ -11,10 +11,13 @@ import org.project.dto.requestDto.RegisterRequest;
 import org.project.security.JwtUtil;
 import org.project.service.LoginService;
 import org.project.service.UserTokenService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.javapoet.ClassName;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -62,7 +65,8 @@ public class LoginServiceImpl implements LoginService {
 
     private final JwtUtil jwtUtil;
     private final UserTokenService userTokenService;
-
+    private static final Logger log =
+            LoggerFactory.getLogger(ClassName.class);
     /**
      * Constructor-based dependency injection
      */
@@ -117,7 +121,7 @@ public class LoginServiceImpl implements LoginService {
      */
     @Override
     public ApiResponse<RegisterResponse> login(LoginRequest request) {
-
+        log.info("Inside LoginServiceImpl Login request received for username: {}", request.getUsername());
         try {
             // Authenticate user credentials using Spring Security
             authenticationManager.authenticate(

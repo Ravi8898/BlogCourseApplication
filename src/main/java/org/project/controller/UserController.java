@@ -22,8 +22,8 @@ public class UserController {
     @Autowired
     private UserService userService;
     @GetMapping("/getUserById")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@RequestParam("id") Long id) {
-        ApiResponse<UserResponse> response = userService.getUserById(id);
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@RequestParam("userId") Long userId) {
+        ApiResponse<UserResponse> response = userService.getUserById(userId);
 
         if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity.status(HttpStatus.OK)

@@ -22,11 +22,11 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
 
     @Override
-    public ApiResponse<UserResponse> getUserById(Long id) {
+    public ApiResponse<UserResponse> getUserById(Long userId) {
 
         ApiResponse<UserResponse> response;
         try{
-            Optional<User> userOptional = userRepository.findById(id);
+            Optional<User> userOptional = userRepository.findById(userId);
             if(userOptional.isPresent()){
                 User user = userOptional.get();
                 UserResponse userResponse = new UserResponse(

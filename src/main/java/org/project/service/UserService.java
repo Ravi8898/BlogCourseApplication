@@ -6,6 +6,6 @@ import org.project.dto.responseDto.UserResponse;
 import java.util.List;
 
 public interface UserService {
-    ApiResponse<UserResponse> getUserById(Long id);
+    ApiResponse<UserResponse> getUserById(Long userId);
     ApiResponse<List<UserResponse>> getAllUsers();
 }
