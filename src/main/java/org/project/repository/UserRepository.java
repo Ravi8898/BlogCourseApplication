@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String userName);
     boolean existsByUsername(String userName);
-    Optional<User> findByIdAndIsActive(Long userId, String y);
+    Optional<User> findByIdAndIsActive(Long userId, String isActive);
     List<User> findByIsActive(String isActive);
     @Modifying
     @Transactional

@@ -26,7 +26,8 @@ public class UserServiceImpl implements UserService {
 
         ApiResponse<UserResponse> response;
         try{
-            Optional<User> userOptional = userRepository.findByIdAndIsActive(userId, "Y");;
+            String isActive = "Y";
+            Optional<User> userOptional = userRepository.findByIdAndIsActive(userId, isActive);;
             if(userOptional.isPresent()){
                 User user = userOptional.get();
                 UserResponse userResponse = new UserResponse(
