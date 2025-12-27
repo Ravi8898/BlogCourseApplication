@@ -37,5 +37,13 @@ public class UserController {
                 .status(response.getStatusCode())
                 .body(response);
     }
+    @DeleteMapping("/deleteUserById")
+    public ResponseEntity<ApiResponse<Void>> deleteUserById(
+            @RequestParam("userId") Long userId) {
+
+        ApiResponse<Void> response = userService.deleteUserById(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 
 }

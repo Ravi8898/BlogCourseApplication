@@ -34,7 +34,8 @@ public class MessageConstants {
 
     //User messages
     public static final String FETCH_USERS_SUCCESS ="Users fetched successfully.";
-    public static final String FETCH_USERS_FAILED = "Failed to fetch users.";
+    public static final String FETCH_USERS_FAILED = "Failed to fetch users. Something went wrong.";
     public static final String NO_USERS_FOUND = "No users found.";
-
+    public static final String DELETE_USER_SUCCESS = "User account deleted successfully.";
+    public static final String DELETE_USER_FAILED = "Failed to delete user.";
 }

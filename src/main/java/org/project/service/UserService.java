@@ -8,4 +8,7 @@ import java.util.List;
 public interface UserService {
     ApiResponse<UserResponse> getUserById(Long userId);
     ApiResponse<List<UserResponse>> getAllUsers();
+    ApiResponse<Void> deleteUserById(Long userId);
+
+
 }
