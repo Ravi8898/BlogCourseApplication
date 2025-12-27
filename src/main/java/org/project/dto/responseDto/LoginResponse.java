@@ -10,7 +10,7 @@ import org.project.enums.UserRole;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponse {
+public class LoginResponse {
     private Long userId;
     private String firstName;
     private String lastName;
@@ -18,4 +18,5 @@ public class UserResponse {
     private String phoneNumber;
     private UserRole role;
     private AddressResponse address;
+    private String token;
 }

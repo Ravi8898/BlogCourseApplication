@@ -1,0 +1,26 @@
+package org.project.mapper;
+
+import org.project.dto.requestDto.AddressRequest;
+import org.project.model.Address;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AddressRequestMapper
+        implements Mapper<AddressRequest, Address> {
+
+    @Override
+    public Address map(AddressRequest request) {
+
+        if (request == null) return null;
+
+        return Address.builder()
+                .addressLine1(request.getAddressLine1())
+                .addressLine2(request.getAddressLine2())
+                .city(request.getCity())
+                .state(request.getState())
+                .country(request.getCountry())
+                .postalCode(request.getPostalCode())
+                .build();
+    }
+}
+

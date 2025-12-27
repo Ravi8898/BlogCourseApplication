@@ -5,9 +5,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
+import org.project.enums.UserRole;
 import org.project.model.audit.BaseAuditEntity;
-
-import java.sql.Timestamp;
 
 
 @Entity
@@ -24,14 +23,18 @@ public class User extends BaseAuditEntity {
     @Column(name="userId")
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String username;
+    @Column(nullable = false)
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
 
     @Column(nullable = false)
     private String password; // NOTE: hash passwords in real apps
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Pattern(
@@ -39,6 +42,13 @@ public class User extends BaseAuditEntity {
             message = "Invalid Mobile Number"
     )
     private String phoneNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    @Column(name = "addressId")
+    private Long addressId;
 
     private String isActive;
 }

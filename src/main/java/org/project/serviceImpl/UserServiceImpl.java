@@ -1,7 +1,11 @@
 package org.project.serviceImpl;
 
+import org.project.dto.responseDto.AddressResponse;
 import org.project.dto.responseDto.UserResponse;
+import org.project.mapper.AddressResponseMapper;
+import org.project.model.Address;
 import org.project.model.User;
+import org.project.repository.AddressRepository;
 import org.project.repository.UserRepository;
 import org.project.service.UserService;
 import org.project.dto.responseDto.ApiResponse;
@@ -21,6 +25,12 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private AddressResponseMapper addressResponseMapper;
+
     @Override
     public ApiResponse<UserResponse> getUserById(Long userId) {
 
@@ -30,14 +40,21 @@ public class UserServiceImpl implements UserService {
             Optional<User> userOptional = userRepository.findByIdAndIsActive(userId, isActive);;
             if(userOptional.isPresent()){
                 User user = userOptional.get();
+
+                Address address= addressRepository.getAddressById(user.getAddressId());
+                AddressResponse addressResponse = addressResponseMapper.map(address);
+
                 UserResponse userResponse = new UserResponse(
                         user.getId(),
-                        user.getUsername(),
+                        user.getFirstName(),
+                        user.getLastName(),
                         user.getEmail(),
-                        user.getPhoneNumber()
+                        user.getPhoneNumber(),
+                        user.getRole(),
+                        addressResponse
                 );
                 response = new ApiResponse<>(
-                        SUCCESS, SUCCESS, HttpStatus.OK.value(), userResponse
+                        SUCCESS, FETCH_USERS_SUCCESS, HttpStatus.OK.value(), userResponse
                 );
             }else {
                 response = new ApiResponse<>(FAILED, USER_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
@@ -66,13 +83,20 @@ public class UserServiceImpl implements UserService {
             }
 
             List<UserResponse> userResponses = users.stream()
-                    .map(user -> new UserResponse(
+                .map(user -> {
+                    Address address = addressRepository.getAddressById(user.getAddressId());
+                    AddressResponse addressResponse = addressResponseMapper.map(address);
+
+                    return new UserResponse(
                             user.getId(),
-                            user.getUsername(),
+                            user.getFirstName(),
+                            user.getLastName(),
                             user.getEmail(),
-                            user.getPhoneNumber()
-                    ))
-                    .collect(Collectors.toList());
+                            user.getPhoneNumber(),
+                            user.getRole(),
+                            addressResponse
+                    );
+                }).toList();
 
             response = new ApiResponse<>(
                     SUCCESS,

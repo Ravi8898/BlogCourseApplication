@@ -4,6 +4,7 @@ import static org.project.constants.MessageConstants.*;
 
 import org.project.dto.requestDto.LoginRequest;
 import org.project.dto.responseDto.ApiResponse;
+import org.project.dto.responseDto.LoginResponse;
 import org.project.dto.responseDto.RegisterResponse;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.service.LoginService;
@@ -45,9 +46,9 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<RegisterResponse>> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request) {
         log.info("Login request received for username: {}", request.getUsername());
-        ApiResponse<RegisterResponse> response = loginService.login(request);
+        ApiResponse<LoginResponse> response = loginService.login(request);
         log.info("Response from LoginServiceImpl: {} for username: {}",response, request.getUsername());
 
         if (!response.getStatus().equalsIgnoreCase(SUCCESS)) {

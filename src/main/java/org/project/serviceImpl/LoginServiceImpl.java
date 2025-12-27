@@ -2,10 +2,15 @@ package org.project.serviceImpl;
 
 import org.project.constants.MessageConstants;
 import org.project.dto.requestDto.LoginRequest;
+import org.project.dto.responseDto.AddressResponse;
 import org.project.dto.responseDto.ApiResponse;
+import org.project.dto.responseDto.LoginResponse;
 import org.project.dto.responseDto.RegisterResponse;
-import org.project.mapper.UserToRegisterResponseMapper;
+import org.project.mapper.AddressRequestMapper;
+import org.project.mapper.AddressResponseMapper;
+import org.project.model.Address;
 import org.project.model.User;
+import org.project.repository.AddressRepository;
 import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.security.JwtUtil;
@@ -14,9 +19,7 @@ import org.project.service.UserTokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.javapoet.ClassName;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -24,14 +27,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 
 import static org.project.constants.MessageConstants.*;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-import static org.project.constants.MessageConstants.*;
 
 /**
  * Service implementation for Login & Registration operations.
@@ -40,11 +39,11 @@ import static org.project.constants.MessageConstants.*;
 @Service
 public class LoginServiceImpl implements LoginService {
 
-    /**
-     * Mapper to convert User entity to RegisterResponse DTO
-     */
     @Autowired
-    private UserToRegisterResponseMapper mapper;
+    private AddressResponseMapper addressResponseMapper;
+
+    @Autowired
+    private AddressRequestMapper addressRequestMapper;
 
     /**
      * Spring Security authentication manager
@@ -56,6 +55,8 @@ public class LoginServiceImpl implements LoginService {
      * Repository to interact with Users table
      */
     private final UserRepository userRepository;
+
+    private final AddressRepository addressRepository;
 
     /**
      * Password encoder bean (BCrypt recommended)
@@ -71,9 +72,12 @@ public class LoginServiceImpl implements LoginService {
      * Constructor-based dependency injection
      */
     public LoginServiceImpl(AuthenticationManager authenticationManager,
-                            UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserTokenService userTokenService) {
+                            UserRepository userRepository, AddressRepository addressRepository,
+                            PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
+                            UserTokenService userTokenService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
+        this.addressRepository = addressRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userTokenService = userTokenService;
@@ -90,22 +94,32 @@ public class LoginServiceImpl implements LoginService {
     public RegisterResponse register(RegisterRequest request) {
         try{
             // Check if username already exists
-            if (userRepository.existsByUsername(request.getUsername())) {
+            if (userRepository.existsByEmail(request.getEmail()) || userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
                 return null;
             }
+            // Save Address
+            Address address = addressRequestMapper.map(request.getAddress());
+            Address savedAddress = addressRepository.save(address);
+
+            AddressResponse addressResponse = addressResponseMapper.map(address);
+            String isActive = "Y";
             // Build User entity and encrypt password
             User user = User.builder()
-                    .username(request.getUsername())
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
-                    .isActive("Y")
+                    .addressId(savedAddress.getId())
+                    .role(request.getRole())
+                    .isActive(isActive)
                     .build();
 
             // Save user to database
             User savedUser = userRepository.save(user);
-            // Convert entity to response DTO
-            return mapper.map(savedUser);
+            return new RegisterResponse(savedUser.getId(), savedUser.getFirstName(),
+                    savedUser.getLastName(), savedUser.getEmail(),
+                    savedUser.getPhoneNumber(), savedUser.getRole(), addressResponse);
         } catch (Exception e) {
             // Catch any unexpected exception and wrap it
             throw new RuntimeException(SOMETHING_WENT_WRONG, e);
@@ -120,7 +134,7 @@ public class LoginServiceImpl implements LoginService {
      * @return ApiResponse with RegisterResponse on success
      */
     @Override
-    public ApiResponse<RegisterResponse> login(LoginRequest request) {
+    public ApiResponse<LoginResponse> login(LoginRequest request) {
         log.info("Inside LoginServiceImpl Login request received for username: {}", request.getUsername());
         try {
             // Authenticate user credentials using Spring Security
@@ -128,17 +142,24 @@ public class LoginServiceImpl implements LoginService {
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername(),request.getPassword()));
             // Fetch user details after successful authentication
-            User user = userRepository.findByUsername(request.getUsername())
+            User user = userRepository.findByEmailOrPhoneNumber(request.getUsername(),
+                            request.getUsername())
                     .orElseThrow(() -> new RuntimeException(USER_NOT_FOUND));
 
             // Generate JWT token (if applicable)
-            String token = jwtUtil.generateToken(user.getUsername());
+            String token = jwtUtil.generateToken(user.getEmail());
             //Save token with expiry
             userTokenService.saveToken(user, token, LocalDateTime.now().plusHours(1));
 
+            Address address = addressRepository
+                    .findById(user.getAddressId())
+                    .orElse(null);
+
+            AddressResponse addressResponse = addressResponseMapper.map(address);
             // Prepare response DTO
-            RegisterResponse response = new RegisterResponse(user.getId(),
-                            user.getUsername(),user.getEmail(), user.getPhoneNumber(), token);
+            LoginResponse response = new LoginResponse(user.getId(),
+                            user.getFirstName(), user.getLastName(), user.getEmail(),
+                    user.getPhoneNumber(),user.getRole(), addressResponse, token);
             // Return success response
             return new ApiResponse<>(SUCCESS, LOGIN_SUCCESS, HttpStatus.OK.value(), response);
         } catch (BadCredentialsException ex) {
