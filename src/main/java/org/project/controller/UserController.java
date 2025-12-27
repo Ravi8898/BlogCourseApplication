@@ -13,11 +13,6 @@ import static org.project.constants.MessageConstants.SUCCESS;
 
 @RestController
 @RequestMapping("/api/user")
-@CrossOrigin(
-        origins = "*",
-        allowedHeaders = "*",
-        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS}
-)
 public class UserController {
     @Autowired
     private UserService userService;
