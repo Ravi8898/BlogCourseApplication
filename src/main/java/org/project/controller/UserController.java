@@ -1,6 +1,8 @@
 package org.project.controller;
 
 import java.util.List;
+
+import org.project.dto.requestDto.UpdateUserRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.UserResponse;
 import org.project.service.UserService;
@@ -44,6 +46,19 @@ public class UserController {
         ApiResponse<Void> response = userService.deleteUserById(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @PostMapping("/updateUserById")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserById(
+            @RequestBody UpdateUserRequest updateUserRequest) {
+
+        ApiResponse<UserResponse> response =
+                userService.updateUserById(updateUserRequest);
+
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+    }
+
 
 
 }

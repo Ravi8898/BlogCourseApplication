@@ -22,5 +22,31 @@ public class AddressRequestMapper
                 .postalCode(request.getPostalCode())
                 .build();
     }
+    public void updateEntity(AddressRequest request, Address address) {
+
+        if (request == null || address == null) return;
+
+        if (request.getAddressLine1() != null)
+            address.setAddressLine1(request.getAddressLine1());
+
+        if (request.getAddressLine2() != null)
+            address.setAddressLine2(request.getAddressLine2());
+
+        if (request.getLandmark() != null)
+            address.setLandmark(request.getLandmark());
+
+        if (request.getCity() != null)
+            address.setCity(request.getCity());
+
+        if (request.getState() != null)
+            address.setState(request.getState());
+
+        if (request.getCountry() != null)
+            address.setCountry(request.getCountry());
+
+        if (request.getPostalCode() != null)
+            address.setPostalCode(request.getPostalCode());
+    }
+
 }
 
