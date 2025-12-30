@@ -16,6 +16,7 @@ public class AddressRequestMapper
         return Address.builder()
                 .addressLine1(request.getAddressLine1())
                 .addressLine2(request.getAddressLine2())
+                .landmark(request.getLandmark())
                 .city(request.getCity())
                 .state(request.getState())
                 .country(request.getCountry())
