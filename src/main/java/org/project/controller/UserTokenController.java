@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 
 import static org.project.constants.MessageConstants.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api/userToken")
 @CrossOrigin(
@@ -21,16 +24,33 @@ import static org.project.constants.MessageConstants.*;
 )
 public class UserTokenController {
 
+    private static final Logger log = LoggerFactory.getLogger(UserTokenController.class);
+
     @Autowired
     private UserTokenService userTokenService;
 
+    /**
+     * Revoke all active tokens for a user except the current session token
+     */
     @PostMapping("/revokeAllTokensByUserId")
-    public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(@RequestBody UserTokenRequest userTokenRequest) {
-        ApiResponse<?> response = userTokenService.revokeAllTokensByUserId(userTokenRequest);
+    public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(
+            @RequestBody UserTokenRequest userTokenRequest) {
+
+        log.info("Received request to revoke all tokens for userId: {}", userTokenRequest.getUserId());
+
+        ApiResponse<?> response =
+                userTokenService.revokeAllTokensByUserId(userTokenRequest);
+
+        log.info("Revoke all tokens response for userId {} : {}",
+                userTokenRequest.getUserId(), response.getStatus());
+
         if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity.status(HttpStatus.OK)
                     .body(response);
         }
+
+        log.error("Failed to revoke all tokens for userId: {}", userTokenRequest.getUserId());
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
