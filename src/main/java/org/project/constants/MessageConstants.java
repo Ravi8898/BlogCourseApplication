@@ -38,4 +38,7 @@ public class MessageConstants {
     public static final String NO_USERS_FOUND = "No users found.";
     public static final String DELETE_USER_SUCCESS = "User account deleted successfully.";
     public static final String DELETE_USER_FAILED = "Failed to delete user.";
+    public static final String PROFILE_UPDATE_SUCCESS = "Profile updated successfully";
+    public static final String PROFILE_UPDATE_FAILED = "Profile updation failed. Something went wrong.";
+    public static final String LOGOUT_ON_PROFILE_UPDATE = "Profile updated. Please login again.";
 }
