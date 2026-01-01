@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.project.constants.MessageConstants.*;
 
@@ -52,22 +53,31 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<UserResponse> getUserById(Long userId) {
 
-        log.info("Fetching user by id: {}", userId);
+        log.info("getUserById called with userId: {}", userId);
 
         ApiResponse<UserResponse> response;
-        try {
+        try{
             String isActive = "Y";
 
-            // Fetch active user by ID
+            // Fetch active user from repository
             Optional<User> userOptional = userRepository.findByIdAndIsActive(userId, isActive);
 
-            if (userOptional.isPresent()) {
+            log.info("User fetched from repository: {}", userOptional);
+
+            if(userOptional.isPresent()){
                 User user = userOptional.get();
 
-                // Fetch and map address details
-                Address address = addressRepository.getAddressById(user.getAddressId());
+                log.info("Active user found: {}", user);
+
+                // Fetch address associated with user
+                Address address= addressRepository.getAddressById(user.getAddressId());
+
+                log.info("Address fetched for userId {} : {}", userId, address);
+
+                // Map address entity to response DTO
                 AddressResponse addressResponse = addressResponseMapper.map(address);
 
+                // Prepare user response DTO
                 UserResponse userResponse = new UserResponse(
                         user.getId(),
                         user.getFirstName(),
@@ -83,15 +93,18 @@ public class UserServiceImpl implements UserService {
                 response = new ApiResponse<>(
                         SUCCESS, FETCH_USERS_SUCCESS, HttpStatus.OK.value(), userResponse
                 );
-            } else {
-                log.info("User not found with id: {}", userId);
+            }else {
+                // User not found or inactive
+                log.info("No active user found for userId: {}", userId);
                 response = new ApiResponse<>(FAILED, USER_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
             }
-        } catch (Exception ex) {
-            log.error("Error while fetching user by id: {}", userId, ex);
+        }catch (Exception ex){
+            //unexpected exception
+            log.error("Exception occurred while fetching user by userId: {}", userId, ex);
             response = new ApiResponse<>(FAILED, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         return response;
+
     }
 
     /**
@@ -100,13 +113,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<List<UserResponse>> getAllUsers() {
 
-        log.info("Fetching all active users");
+        log.info("getAllUsers called");
 
         ApiResponse<List<UserResponse>> response;
 
         try {
             // Fetch all active users
             List<User> users = userRepository.findByIsActive("Y");
+
+            log.info("Users fetched from repository: {}", users);
 
             if (users.isEmpty()) {
                 log.info("No active users found");
@@ -118,10 +133,15 @@ public class UserServiceImpl implements UserService {
                 );
             }
 
-            // Map users to response DTO
+            // Map each user entity to response DTO
             List<UserResponse> userResponses = users.stream()
                     .map(user -> {
+
+                        // Fetch address for each user
                         Address address = addressRepository.getAddressById(user.getAddressId());
+
+                        log.info("Fetching address for user during getAllUsers | userId={} | address={}", user.getId(), address);
+
                         AddressResponse addressResponse = addressResponseMapper.map(address);
 
                         return new UserResponse(
@@ -135,7 +155,7 @@ public class UserServiceImpl implements UserService {
                         );
                     }).toList();
 
-            log.info("Fetched {} users successfully", userResponses.size());
+            log.info("Successfully mapped {} users to UserResponse", userResponses.size());
 
             response = new ApiResponse<>(
                     SUCCESS,
@@ -145,7 +165,7 @@ public class UserServiceImpl implements UserService {
             );
 
         } catch (Exception ex) {
-            log.error("Error while fetching all users", ex);
+            log.error("Exception occurred while fetching all users", ex);
             response = new ApiResponse<>(
                     FAILED,
                     FETCH_USERS_FAILED,
@@ -162,12 +182,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<Void> deleteUserById(Long userId) {
 
-        log.info("Deleting user with id: {}", userId);
+        log.info("deleteUserById called with userId: {}", userId);
 
+        // Deactivate user in database
         int updated = userRepository.deactivateUserById(userId);
 
+        log.info("Deactivate user result count: {}", updated);
+
         if (updated == 0) {
-            log.info("User not found for deletion with id: {}", userId);
+            log.info("User not found or already inactive for userId: {}", userId);
             return new ApiResponse<>(
                     FAILED,
                     DELETE_USER_FAILED,
@@ -176,8 +199,7 @@ public class UserServiceImpl implements UserService {
             );
         }
 
-        log.info("User deleted successfully with id: {}", userId);
-
+        log.info("User successfully deactivated for userId: {}", userId);
         return new ApiResponse<>(
                 SUCCESS,
                 DELETE_USER_SUCCESS,
@@ -191,23 +213,29 @@ public class UserServiceImpl implements UserService {
      */
     public ApiResponse<UserResponse> updateUserById(UpdateUserRequest request) {
 
-        log.info("Updating user profile for userId: {}", request.getUserId());
+        log.info("updateUserById called with request: {}", request);
 
         ApiResponse<UserResponse> response;
         try {
             String isActive = "Y";
             boolean shouldLogout = false;
 
-            // Fetch active user
+            // Fetch active user for update
             Optional<User> userOptional = userRepository.findByIdAndIsActive(request.getUserId(), isActive);
+
+            log.info("User fetched for update: {}", userOptional);
 
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
 
-                // Fetch address linked to user
+                log.info("Existing user before update: {}", user);
+
+                // Fetch address entity
                 Address address = addressRepository.getAddressById(user.getAddressId());
 
-                // Update basic user details if provided
+                log.info("Address fetched for update: {}", address);
+
+                // Update only provided user fields and trigger logout if sensitive details (email/phone) are changed
                 if (request.getFirstName() != null) {
                     user.setFirstName(request.getFirstName());
                 }
@@ -232,17 +260,25 @@ public class UserServiceImpl implements UserService {
 
                 // Update address details if provided
                 if (request.getAddressRequest() != null && user.getAddressId() != null) {
+
+                    // Update address entity from request
                     addressRequestMapper.updateEntity(request.getAddressRequest(), address);
+
+                    // Save updated address
                     addressRepository.save(address);
+
+                    log.info("Address updated and saved in database: {}", address);
                 }
 
                 // Save updated user
                 User updatedUser = userRepository.save(user);
 
-                // Revoke all tokens if sensitive data changed
+                log.info("User updated and saved in database: {}", updatedUser);
+
                 if (shouldLogout) {
-                    log.info("Revoking all tokens for userId due to profile update: {}", user.getId());
+                    // Revoke all tokens if sensitive data(email or phoneNumber) changed
                     userTokenRepository.revokeAllTokensByUserId(user.getId());
+                    log.info("All tokens revoked for userId: {}", user.getId());
                 }
 
                 AddressResponse addressResponse = addressResponseMapper.map(address);
@@ -257,22 +293,19 @@ public class UserServiceImpl implements UserService {
                         addressResponse
                 );
 
-                log.info("User profile updated successfully for userId: {}", user.getId());
-
                 response = new ApiResponse<>(
-                        SUCCESS,
-                        shouldLogout ? LOGOUT_ON_PROFILE_UPDATE : PROFILE_UPDATE_SUCCESS,
-                        HttpStatus.OK.value(),
-                        userResponse
+                        SUCCESS,shouldLogout ? LOGOUT_ON_PROFILE_UPDATE : PROFILE_UPDATE_SUCCESS, HttpStatus.OK.value(), userResponse
                 );
             } else {
-                log.info("User not found for update with userId: {}", request.getUserId());
+                log.info("User not found for update, userId: {}", request.getUserId());
                 response = new ApiResponse<>(FAILED, PROFILE_UPDATE_FAILED, HttpStatus.NOT_FOUND.value(), null);
             }
         } catch (Exception ex) {
-            log.error("Error while updating user profile for userId: {}", request.getUserId(), ex);
+            // Exception during update
+            log.error("Exception occurred while updating user, request: {}", request, ex);
             response = new ApiResponse<>(FAILED, PROFILE_UPDATE_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         return response;
+
     }
 }

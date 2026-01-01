@@ -28,6 +28,7 @@ import static org.project.constants.MessageConstants.*;
 public class UserTokenServiceImpl implements UserTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(UserTokenServiceImpl.class);
+
     @Autowired
     private UserTokenRepository userTokenRepository;
 
@@ -41,21 +42,22 @@ public class UserTokenServiceImpl implements UserTokenService {
     @Override
     public void saveToken(User user, String token, LocalDateTime expiryTime) {
 
-        log.info("Saving token for userId={}", user.getId());
+        log.info("Saving new token for userId: {}, expiryTime: {}", user.getId(), expiryTime);
 
-        /**
-         * Create a new UserToken entity and
-         * Associate the token with the authenticated user's ID
-         * "N" indicates the token is currently valid.
-         */
+        // Create new UserToken entity
         UserToken userToken = new UserToken();
         userToken.setUserId(user.getId());
         userToken.setToken(token);
         userToken.setRevoked("N");
         userToken.setExpiryTime(expiryTime);
 
+        log.info("UserToken entity created: {}", userToken);
+
+        // Persist token
         userTokenRepository.save(userToken);
         log.info("Token saved successfully for userId={}", user.getId());
+
+        log.info("Token successfully saved for userId: {}", user.getId());
     }
 
     /**
@@ -65,12 +67,21 @@ public class UserTokenServiceImpl implements UserTokenService {
      * @return true if token is valid, false otherwise
      */
     @Override
+    //returns true if token is INVALID!
     public boolean isTokenValid(String token) {
-        log.info("Validating token");
+
+        log.info("Validating token: {}", token);
+
         System.out.println("Token :: "+userTokenRepository.findByTokenAndRevoked(token, "N"));
 
-        return userTokenRepository
-                .findByTokenAndRevoked(token, "N")
+        // Fetch active (non-revoked) token from database
+        Optional<UserToken> userTokenOptional =
+                userTokenRepository.findByTokenAndRevoked(token, "N");
+
+        log.info("Fetched token for validation: {}", userTokenOptional);
+
+        // Return true if token is expired or not found i.e INVALID; false if token is still valid
+        return userTokenOptional
                 .map(userToken ->
                         userToken.getExpiryTime()
                                 .isBefore(LocalDateTime.now()))
@@ -85,15 +96,20 @@ public class UserTokenServiceImpl implements UserTokenService {
      */
     @Override
     public boolean isTokenExpired(String token) {
-        log.info("Checking token expiry");
-        return userTokenRepository
-                .findByToken(token)
+
+        log.info("Checking if token is expired: {}", token);
+
+        // Fetch token from database
+        Optional<UserToken> userTokenOptional =
+                userTokenRepository.findByToken(token);
+
+        log.info("Fetched token for expiry check: {}", userTokenOptional);
+        // Returns true if the token is expired; false if it is still valid
+        return userTokenOptional
                 .map(userToken ->
                         userToken.getExpiryTime()
                                 .isBefore(LocalDateTime.now()))
                 .orElse(false);
-
-
     }
 
     /**
@@ -102,21 +118,32 @@ public class UserTokenServiceImpl implements UserTokenService {
      */
     @Override
     public void revokeToken(String token) {
-        log.info("Revoking token");
+
+        log.info("Revoking single token: {}", token);
+
+        // Find active token and revoke it by marking as revoked in the database
         userTokenRepository.findByTokenAndRevoked(token, "N")
                 .ifPresent(userToken -> {
+
+                    log.info("Active token found for revocation: {}", userToken);
+
                     userToken.setRevoked("Y");
                     userTokenRepository.save(userToken);
-                    log.info("Token revoked successfully");
+
+                    log.info("Token revoked successfully: {}", userToken);
                 });
     }
 
     //Revokes all active tokens associated with a specific user.
     @Override
     public void revokeAllTokensForUser(Long userId) {
-        log.info("Revoking all tokens for userId={}", userId);
+
+        log.info("Revoking all tokens for userId: {}", userId);
+
+        //revoke all tokens of given user from database
         userTokenRepository.revokeAllTokensByUserId(userId);
-        log.info("All tokens revoked for userId={}", userId);
+
+        log.info("All tokens revoked for userId: {}", userId);
     }
 
     /**
@@ -126,33 +153,50 @@ public class UserTokenServiceImpl implements UserTokenService {
     @Override
     public ApiResponse<?> revokeAllTokensByUserId(UserTokenRequest userTokenRequest) {
 
-        log.info("Revoking all sessions except current session for userId={}",
-                userTokenRequest.getUserId());
+        log.info("Revoke all tokens request received: {}", userTokenRequest);
+
         ApiResponse<?> response;
         try {
-            List<UserToken> userTokenList = userTokenRepository.findByUserId(userTokenRequest.getUserId());
+            // Fetch all tokens for user in a List which has all fields of UserToken Entity
+            List<UserToken> userTokenList =
+                    userTokenRepository.findByUserId(userTokenRequest.getUserId());
+
+            log.info("Fetched tokens for userId {} : {}", userTokenRequest.getUserId(), userTokenList);
+
+            //if List is not empty
             if (!userTokenList.isEmpty()) {
-                log.info("Total tokens found={}", userTokenList.size());
-                // Identify the current session token so it should not be revoked
-                Optional<UserToken> currentToken=  userTokenList.stream().filter(userToken -> userToken.getToken().equals(userTokenRequest.getCurrentToken())).findFirst();
-                // Remove the current token from the list
+
+                // Find current token to exclude from revocation
+                Optional<UserToken> currentToken =
+                        userTokenList.stream()
+                                .filter(userToken -> userToken.getToken().equals(userTokenRequest.getCurrentToken()))
+                                .findFirst();
+
+                log.info("Current active token identified: {}", currentToken);
+
+                //removing currentToken from List
                 currentToken.ifPresent(userTokenList::remove);
-                // Revoke all remaining tokens (logout from other sessions)
-                userTokenList.forEach(userToken ->userToken.setRevoked("Y"));
+
+                // Revoke remaining tokens
+                userTokenList.forEach(userToken -> userToken.setRevoked("Y"));
+
+                log.info("Revoking tokens: {}", userTokenList);
+
+                // Save all updated UserToken entities so token revocation is applied in the database
                 userTokenRepository.saveAll(userTokenList);
 
-                log.info("All other sessions revoked successfully");
+                log.info("All sessions revoked successfully for userId: {}", userTokenRequest.getUserId());
+
                 response = new ApiResponse<>(SUCCESS, ALL_SESSION_LOGOUT_SUCCESS, HttpStatus.OK.value(), null);
             }
             else {
-                log.info("No tokens found for userId={}", userTokenRequest.getUserId());
+                log.info("No tokens found for userId: {}", userTokenRequest.getUserId());
                 response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
             }
 
         }catch (Exception ex){
-            log.error("Exception occurred while revoking sessions for userId={}",
-                    userTokenRequest.getUserId(), ex);
-            // Handle any unexpected errors during token revocation
+            // Exception during revoke-all
+            log.error("Exception occurred while revoking all tokens for request: {}", userTokenRequest, ex);
             response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED_500, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         return response;
