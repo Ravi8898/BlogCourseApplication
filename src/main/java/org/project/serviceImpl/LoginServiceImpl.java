@@ -66,8 +66,10 @@ public class LoginServiceImpl implements LoginService {
 
     private final JwtUtil jwtUtil;
     private final UserTokenService userTokenService;
+
     private static final Logger log =
             LoggerFactory.getLogger(ClassName.class);
+
     /**
      * Constructor-based dependency injection
      */
@@ -86,23 +88,33 @@ public class LoginServiceImpl implements LoginService {
     /**
      * Registers a new user into the system
      *
-     * @param  request RegisterRequest containing user details
+     * @param request RegisterRequest containing user details
      * @return RegisterResponse DTO
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public RegisterResponse register(RegisterRequest request) {
+
+        log.info("Register request received");
+
         try{
             // Check if username already exists
             if (userRepository.existsByEmail(request.getEmail()) || userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                log.info("Registration failed - email or phone already exists");
                 return null;
             }
+
             // Save Address
             Address address = addressRequestMapper.map(request.getAddress());
+            log.info("Address mapped from request: {}", address);
+
             Address savedAddress = addressRepository.save(address);
+            log.info("Address saved successfully: {}", savedAddress);
 
             AddressResponse addressResponse = addressResponseMapper.map(address);
+
             String isActive = "Y";
+
             // Build User entity and encrypt password
             User user = User.builder()
                     .firstName(request.getFirstName())
@@ -115,16 +127,21 @@ public class LoginServiceImpl implements LoginService {
                     .isActive(isActive)
                     .build();
 
+            log.info("User entity built: {}", user);
+
             // Save user to database
             User savedUser = userRepository.save(user);
+            log.info("User saved successfully: {}", savedUser);
+
             return new RegisterResponse(savedUser.getId(), savedUser.getFirstName(),
                     savedUser.getLastName(), savedUser.getEmail(),
                     savedUser.getPhoneNumber(), savedUser.getRole(), addressResponse);
+
         } catch (Exception e) {
-            // Catch any unexpected exception and wrap it
+            //unexpected exception during registration
+            log.error("Exception occurred during user registration", e);
             throw new RuntimeException(SOMETHING_WENT_WRONG, e);
         }
-
     }
 
     /**
@@ -135,56 +152,88 @@ public class LoginServiceImpl implements LoginService {
      */
     @Override
     public ApiResponse<LoginResponse> login(LoginRequest request) {
+
         log.info("Inside LoginServiceImpl Login request received for username: {}", request.getUsername());
+
         try {
             // Authenticate user credentials using Spring Security
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername(),request.getPassword()));
+
+            log.info("Authentication successful for username: {}", request.getUsername());
+
             // Fetch user details after successful authentication
             User user = userRepository.findByEmailOrPhoneNumber(request.getUsername(),
                             request.getUsername())
                     .orElseThrow(() -> new RuntimeException(USER_NOT_FOUND));
 
-            // Generate JWT token (if applicable)
+            log.info("User fetched after authentication: {}", user);
+
+            // Generate JWT token
             String token = jwtUtil.generateToken(user.getEmail());
-            //Save token with expiry
+            log.info("JWT token generated for userId: {}", user.getId());
+
+            // Save token with expiry
             userTokenService.saveToken(user, token, LocalDateTime.now().plusHours(1));
+            log.info("Token saved with expiry for userId: {}", user.getId());
 
             Address address = addressRepository
                     .findById(user.getAddressId())
                     .orElse(null);
 
+            log.info("Address fetched for login response: {}", address);
+
             AddressResponse addressResponse = addressResponseMapper.map(address);
+
             // Prepare response DTO
             LoginResponse response = new LoginResponse(user.getId(),
-                            user.getFirstName(), user.getLastName(), user.getEmail(),
+                    user.getFirstName(), user.getLastName(), user.getEmail(),
                     user.getPhoneNumber(),user.getRole(), addressResponse, token);
+
             // Return success response
+            log.info("Login successful for userId: {}", user.getId());
             return new ApiResponse<>(SUCCESS, LOGIN_SUCCESS, HttpStatus.OK.value(), response);
+
         } catch (BadCredentialsException ex) {
             // Invalid username or password
+            log.info("Login failed due to bad credentials for username: {}", request.getUsername());
             return new ApiResponse<>(FAILED, LOGIN_FAILED, HttpStatus.UNAUTHORIZED.value(), null);
 
         } catch (Exception ex) {
             // Any other system error
+            log.error("Exception occurred during login for username: {}", request.getUsername(), ex);
             return new ApiResponse<>(ERROR, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
     }
 
+    /**
+     * Logout user by revoking JWT token
+     */
     @Override
     public ApiResponse<RegisterResponse> logout(String authHeader) {
+
+        log.info("Logout request received");
+
         ApiResponse<RegisterResponse> response = new ApiResponse<>();
         try{
             String token = authHeader.substring(7);
+
+            log.info("Token extracted for logout");
+
             // invalidate JWT
             userTokenService.revokeToken(token);
+            log.info("Token revoked successfully");
 
             response.setStatus(SUCCESS);
             response.setMessage(MessageConstants.LOGOUT_SUCCESS);
             response.setStatusCode(HttpStatus.OK.value());
             response.setData(null);
+
         } catch (Exception e) {
+
+            log.error("Exception occurred during logout", e);
+
             response.setStatus(FAILED);
             response.setMessage(LOGOUT_FAILED);
             response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
@@ -193,4 +242,3 @@ public class LoginServiceImpl implements LoginService {
         return response;
     }
 }
-

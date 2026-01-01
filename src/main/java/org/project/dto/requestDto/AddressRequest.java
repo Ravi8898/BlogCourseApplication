@@ -19,6 +19,8 @@ public class AddressRequest {
 
     private String landmark;
 
+    private String district;
+
     @NotBlank(message = "City is required")
     private String city;
 

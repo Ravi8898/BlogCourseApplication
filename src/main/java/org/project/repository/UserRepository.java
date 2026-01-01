@@ -22,9 +22,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Transactional
     @Query("""
-           UPDATE User u 
-           SET u.isActive = 'N' 
-           WHERE u.id = :id 
+           UPDATE User u
+           SET u.isActive = 'N'
+           WHERE u.id = :id
            AND u.isActive = 'Y'
            """)
     int deactivateUserById(@Param("id") Long id);
