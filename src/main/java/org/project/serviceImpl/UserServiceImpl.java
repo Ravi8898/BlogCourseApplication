@@ -47,6 +47,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserTokenRepository userTokenRepository;
 
+    /**
+     * Fetch a user by ID if the user is active.
+     */
     @Override
     public ApiResponse<UserResponse> getUserById(Long userId) {
 
@@ -85,6 +88,8 @@ public class UserServiceImpl implements UserService {
                         addressResponse
                 );
 
+                log.info("User found successfully with id: {}", userId);
+
                 response = new ApiResponse<>(
                         SUCCESS, FETCH_USERS_SUCCESS, HttpStatus.OK.value(), userResponse
                 );
@@ -102,6 +107,9 @@ public class UserServiceImpl implements UserService {
 
     }
 
+    /**
+     * Fetch all active users.
+     */
     @Override
     public ApiResponse<List<UserResponse>> getAllUsers() {
 
@@ -168,6 +176,9 @@ public class UserServiceImpl implements UserService {
         return response;
     }
 
+    /**
+     * Soft delete a user by deactivating the record.
+     */
     @Override
     public ApiResponse<Void> deleteUserById(Long userId) {
 
@@ -197,6 +208,9 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    /**
+     * Update user profile details except role.
+     */
     public ApiResponse<UserResponse> updateUserById(UpdateUserRequest request) {
 
         log.info("updateUserById called with request: {}", request);
@@ -230,18 +244,21 @@ public class UserServiceImpl implements UserService {
                     user.setLastName(request.getLastName());
                 }
 
+                // Update phone number and trigger logout if changed
                 if (request.getPhoneNumber() != null &&
                         !request.getPhoneNumber().equals(user.getPhoneNumber())) {
                     user.setPhoneNumber(request.getPhoneNumber());
                     shouldLogout = true;
                 }
 
+                // Update email and trigger logout if changed
                 if (request.getEmail() != null &&
                         !request.getEmail().equals(user.getEmail())) {
                     user.setEmail(request.getEmail());
                     shouldLogout = true;
                 }
 
+                // Update address details if provided
                 if (request.getAddressRequest() != null && user.getAddressId() != null) {
 
                     // Update address entity from request

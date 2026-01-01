@@ -7,6 +7,8 @@ import org.project.model.User;
 import org.project.model.UserToken;
 import org.project.repository.UserTokenRepository;
 import org.project.service.UserTokenService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,10 +19,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.project.constants.MessageConstants.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+/**
+ * Service implementation for managing user authentication tokens.
+ * Handles token creation, validation, expiration, and revocation logic.
+ */
 @Service
 @Transactional
 public class UserTokenServiceImpl implements UserTokenService {
@@ -30,6 +32,13 @@ public class UserTokenServiceImpl implements UserTokenService {
     @Autowired
     private UserTokenRepository userTokenRepository;
 
+    /**
+     * Saves a new authentication token for a user.
+     *
+     * @param user        authenticated user
+     * @param token       JWT token
+     * @param expiryTime  token expiration time
+     */
     @Override
     public void saveToken(User user, String token, LocalDateTime expiryTime) {
 
@@ -46,10 +55,17 @@ public class UserTokenServiceImpl implements UserTokenService {
 
         // Persist token
         userTokenRepository.save(userToken);
+        log.info("Token saved successfully for userId={}", user.getId());
 
         log.info("Token successfully saved for userId: {}", user.getId());
     }
 
+    /**
+     * Checks whether a token is valid (exists, not revoked, and not expired).
+     *
+     * @param token JWT token
+     * @return true if token is valid, false otherwise
+     */
     @Override
     //returns true if token is INVALID!
     public boolean isTokenValid(String token) {
@@ -72,6 +88,12 @@ public class UserTokenServiceImpl implements UserTokenService {
                 .orElse(true);
     }
 
+    /**
+     * Checks whether the given token has expired.
+     *
+     * @param token JWT token
+     * @return true if the token is expired, false otherwise
+     */
     @Override
     public boolean isTokenExpired(String token) {
 
@@ -90,6 +112,10 @@ public class UserTokenServiceImpl implements UserTokenService {
                 .orElse(false);
     }
 
+    /**
+     * Revokes an active token by marking it as revoked.
+     * @param token JWT token to be revoked
+     */
     @Override
     public void revokeToken(String token) {
 
@@ -108,6 +134,7 @@ public class UserTokenServiceImpl implements UserTokenService {
                 });
     }
 
+    //Revokes all active tokens associated with a specific user.
     @Override
     public void revokeAllTokensForUser(Long userId) {
 
@@ -119,6 +146,10 @@ public class UserTokenServiceImpl implements UserTokenService {
         log.info("All tokens revoked for userId: {}", userId);
     }
 
+    /**
+     * Logs out a user from all active sessions except the current one.
+     * @param userTokenRequest contains userId and the current active token
+     */
     @Override
     public ApiResponse<?> revokeAllTokensByUserId(UserTokenRequest userTokenRequest) {
 
@@ -171,3 +202,5 @@ public class UserTokenServiceImpl implements UserTokenService {
         return response;
     }
 }
+
+
