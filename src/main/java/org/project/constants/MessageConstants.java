@@ -41,4 +41,6 @@ public class MessageConstants {
     public static final String PROFILE_UPDATE_SUCCESS = "Profile updated successfully";
     public static final String PROFILE_UPDATE_FAILED = "Profile updation failed. Something went wrong.";
     public static final String LOGOUT_ON_PROFILE_UPDATE = "Profile updated. Please login again.";
+    public static final String ARTICLE_CREATED_SUCCESS = "Article created successfully";
+    public static final String ARTICLE_CREATED_FAILED = "Article creation failed. Something went wrong.";
 }
