@@ -1,9 +1,11 @@
 package org.project.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.dto.requestDto.UserTokenRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.RegisterResponse;
+import org.project.model.UserToken;
 import org.project.service.UserTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,6 +16,8 @@ import static org.project.constants.MessageConstants.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/userToken")
@@ -34,22 +38,21 @@ public class UserTokenController {
      */
     @PostMapping("/revokeAllTokensByUserId")
     public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(
-            @RequestBody UserTokenRequest userTokenRequest) {
+            HttpServletRequest httpServletRequest) {
 
-        log.info("Received request to revoke all tokens for userId: {}", userTokenRequest.getUserId());
 
         ApiResponse<?> response =
-                userTokenService.revokeAllTokensByUserId(userTokenRequest);
+                userTokenService.revokeAllTokensByUserId(httpServletRequest);
 
         log.info("Revoke all tokens response for userId {} : {}",
-                userTokenRequest.getUserId(), response.getStatus());
+                httpServletRequest, response.getStatus());
 
         if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
             return ResponseEntity.status(HttpStatus.OK)
                     .body(response);
         }
 
-        log.error("Failed to revoke all tokens for userId: {}", userTokenRequest.getUserId());
+        log.error("Failed to revoke all tokens for userId: {}", httpServletRequest);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
