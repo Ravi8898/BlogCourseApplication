@@ -1,0 +1,61 @@
+package org.project.controller;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.project.dto.requestDto.ArticleRequest;
+import org.project.dto.requestDto.RegisterRequest;
+import org.project.dto.responseDto.ApiResponse;
+import org.project.dto.responseDto.ArticleResponse;
+import org.project.dto.responseDto.RegisterResponse;
+import org.project.model.Article;
+import org.project.service.ArticleService;
+import org.project.service.LoginService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.javapoet.ClassName;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import static org.project.constants.MessageConstants.*;
+
+@RestController
+@RequestMapping("/api/article")
+public class ArticleController {
+
+    @Autowired
+    private ArticleService articleService;
+
+    private static final Logger log =
+            LoggerFactory.getLogger(ArticleController.class);
+
+    /**
+     * API to create a new article.
+     * The article is created for the currently logged-in user.
+     * Author information is extracted internally using JWT token.
+     *
+     * @param request        ArticleRequest containing title, description, and content
+     * @param servletRequest HttpServletRequest used to access Authorization header
+     * @return ResponseEntity containing ApiResponse with ArticleResponse
+     */
+    @PostMapping("/createArticle")
+    public ResponseEntity<ApiResponse<ArticleResponse>> createArticle(
+            @RequestBody ArticleRequest request, HttpServletRequest servletRequest) {
+        log.info("Create Article API called");
+
+
+        // Delegate article creation to service layer
+        ApiResponse<ArticleResponse> response = articleService.createArticle(request, servletRequest);
+        log.info("Create Article API completed with statusCode={}",
+                response.getStatusCode());
+
+        // Return HTTP response with status and body from service
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+
+    }
+}
