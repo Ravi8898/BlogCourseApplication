@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -103,6 +104,7 @@ public class ArticleServiceImpl implements ArticleService {
                     .pdfPath(filePath)
                     .articleStatus(ArticleStatus.DRAFT)
                     .authorId(authorId)
+                    .isActive("Y")
                     .build();
 
             // Save article to database
@@ -220,5 +222,71 @@ public class ArticleServiceImpl implements ArticleService {
             log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
             throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
         }
+    }
+    /**
+     * Fetch all active articles.
+     */
+    @Override
+    public ApiResponse<List<ArticleResponse>> getAllArticles() {
+
+        log.info("getAllArticles method called");
+
+        ApiResponse<List<ArticleResponse>> response;
+        try{
+            // Fetch all active articles
+            List<Article> articleList= articleRepository.findByIsActive("Y");
+
+            log.info("Articles fetched from repository: {}", articleList);
+
+            if (articleList.isEmpty()) {
+                log.info("No active users found");
+                return new ApiResponse<>(
+                        FAILED,
+                        DATA_NOT_FOUND,
+                        HttpStatus.NO_CONTENT.value(),
+                        List.of()
+                );
+            }
+
+            // Map each article entity to response DTO
+            List<ArticleResponse> articleResponses = articleList.stream()
+                    .map( article -> {
+
+                                return new ArticleResponse(
+                                        article.getId(),
+                                        article.getTitle(),
+                                        article.getDescription(),
+                                        article.getPdfPath(),
+                                        article.getArticleStatus(),
+                                        article.getAuthorId(),
+                                        article.getReviewMessage(),
+                                        article.getReviewedBy(),
+                                        article.getReviewedAt()
+                                );
+                            }
+                    ).toList();
+
+            log.info("Successfully mapped {} List of articles to List of ArticleResponse", articleResponses.size());
+
+            response = new ApiResponse<List<ArticleResponse>>(
+                    SUCCESS,
+                    FETCH_ARTICLE_SUCCESS,
+                    HttpStatus.OK.value(),
+                    articleResponses
+            );
+
+        }
+        catch (Exception ex) {
+
+            log.error("Error while fetching articles", ex);
+
+            response =  new ApiResponse<>(
+                    FAILED,
+                    FETCH_ARTICLE_FAILED,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
+        return response;
     }
 }

@@ -15,10 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.javapoet.ClassName;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import static org.project.constants.MessageConstants.*;
 
@@ -57,5 +56,24 @@ public class ArticleController {
                 .status(response.getStatusCode())
                 .body(response);
 
+    }
+    /**
+     * API to fetch all articles.
+     * The article is fetched for the admin.
+     * @return ResponseEntity containing ApiResponse with List of ArticleResponse
+     */
+    @GetMapping("/getAllArticles")
+    public ResponseEntity<ApiResponse<List<ArticleResponse>>> getAllArticles(){
+        log.info("getAllArticles API called");
+
+        // Delegate article fetching to service layer
+        ApiResponse<List<ArticleResponse>> response = articleService.getAllArticles();
+        log.info("getAllArticles API completed with statusCode={}",
+                response.getStatusCode());
+
+        // Return HTTP response with status and body from service
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
     }
 }

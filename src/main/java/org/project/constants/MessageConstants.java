@@ -5,6 +5,8 @@ public class MessageConstants {
     public static final String SUCCESS = "SUCCESS";
     public static final String FAILED = "FAILED";
     public static final String ERROR = "ERROR";
+    public static final String DATA_NOT_FOUND = "Data not found.";
+
 
     //    Registration messages
     public static final String USERNAME_PASSWORD_REQUIRED = "Username and password are required.";
@@ -41,7 +43,12 @@ public class MessageConstants {
     public static final String PROFILE_UPDATE_SUCCESS = "Profile updated successfully";
     public static final String PROFILE_UPDATE_FAILED = "Profile updation failed. Something went wrong.";
     public static final String LOGOUT_ON_PROFILE_UPDATE = "Profile updated. Please login again.";
+
+    //Article messages
     public static final String ARTICLE_CREATED_SUCCESS = "Article created successfully";
     public static final String ARTICLE_CREATED_FAILED = "Article creation failed. Something went wrong.";
     public static final String ARTICLE_FILE_SAVE_FAILED = "Failed to save article content file.";
+    public static final String FETCH_ARTICLE_FAILED = "Failed to fetch articles.";
+    public static final String FETCH_ARTICLE_SUCCESS = "Articles fetched successfully.";
+
 }

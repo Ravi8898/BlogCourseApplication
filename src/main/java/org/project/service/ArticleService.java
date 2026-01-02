@@ -7,6 +7,10 @@ import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.ArticleResponse;
 import org.project.dto.responseDto.RegisterResponse;
 
+import java.util.List;
+
 public interface ArticleService {
     ApiResponse<ArticleResponse> createArticle(ArticleRequest request, HttpServletRequest servletRequest);
+    ApiResponse<List<ArticleResponse>> getAllArticles();
+
 }
