@@ -35,7 +35,7 @@ public class Article extends BaseAuditEntity {
     private ArticleStatus articleStatus;
 
     @Column(name = "authorId",nullable = false)
-    private Long userId;
+    private Long authorId;
 
     @Column(length = 1000) // may be null
     private String reviewMessage;
