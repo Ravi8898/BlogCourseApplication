@@ -9,4 +9,5 @@ import org.project.dto.responseDto.RegisterResponse;
 
 public interface ArticleService {
     ApiResponse<ArticleResponse> createArticle(ArticleRequest request, HttpServletRequest servletRequest);
+    ApiResponse<ArticleResponse> getArticleById(Long articleId);
 }

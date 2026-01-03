@@ -7,6 +7,7 @@ import org.project.dto.requestDto.RegisterRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.ArticleResponse;
 import org.project.dto.responseDto.RegisterResponse;
+import org.project.dto.responseDto.UserResponse;
 import org.project.enums.ArticleStatus;
 import org.project.model.Article;
 import org.project.model.UserToken;
@@ -220,5 +221,65 @@ public class ArticleServiceImpl implements ArticleService {
             log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
             throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
         }
+    }
+
+
+    /**
+     * Fetch article details by articleId.
+     *
+     * @param articleId ID of the article to be fetched
+     * @return ApiResponse containing ArticleResponse if found
+     */
+    public ApiResponse<ArticleResponse> getArticleById(Long articleId){
+
+        log.info("getArticleById service called with articleId={}", articleId);
+
+        ApiResponse<ArticleResponse> response;
+
+        try{
+            // Fetch article from repository
+            Optional<Article> articleOptional = articleRepository.findById(articleId);
+
+            log.info("Article fetched from repository for articleId={}", articleId);
+
+            // Check if article exists
+            if (articleOptional.isPresent()) {
+
+                Article article = articleOptional.get();
+                log.info("Article found for articleId={}", articleId);
+
+                // Map Article entity to ArticleResponse DTO
+                ArticleResponse articleResponse = new ArticleResponse(
+                       article.getId(),
+                       article.getTitle(),
+                       article.getDescription(),
+                       article.getPdfPath(),
+                       article.getArticleStatus(),
+                       article.getAuthorId(),
+                       article.getReviewMessage(),
+                       article.getReviewedBy(),
+                       article.getReviewedAt()
+            );
+
+                log.info("ArticleResponse prepared successfully for articleId={}", articleId);
+
+                response = new ApiResponse<>(
+                        SUCCESS, FETCH_ARTICLE_SUCCESS, HttpStatus.OK.value(), articleResponse
+                );
+            }
+            else {
+                // Article not found
+                log.info("No article found for articleId={}", articleId);
+                response = new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
+            }
+        }
+        catch (Exception ex){
+            // Handle unexpected exceptions
+            log.error("Exception occurred while fetching article by articleId={}", articleId, ex);
+            response = new ApiResponse<>(FAILED, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
+        }
+        // Log method exit
+        log.info("getArticleById service completed for articleId={}", articleId);
+        return response;
     }
 }
