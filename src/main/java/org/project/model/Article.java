@@ -8,7 +8,7 @@ import org.project.model.audit.BaseAuditEntity;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Article")
+@Table(name = "article")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,7 +24,7 @@ public class Article extends BaseAuditEntity {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, length = 5000)
+    @Column(nullable = false)
     private String description;
 
     @Column(nullable = false)
