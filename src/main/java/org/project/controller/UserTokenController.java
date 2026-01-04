@@ -1,5 +1,6 @@
 package org.project.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.dto.requestDto.UserTokenRequest;
@@ -33,9 +34,8 @@ public class UserTokenController {
     @Autowired
     private UserTokenService userTokenService;
 
-    /**
-     * Revoke all active tokens for a user except the current session token
-     */
+
+    @Operation(summary = "Revoke all active tokens for a user except the current session token")
     @PostMapping("/revokeAllTokensByUserId")
     public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(
             HttpServletRequest httpServletRequest) {

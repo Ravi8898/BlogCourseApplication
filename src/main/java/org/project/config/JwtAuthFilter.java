@@ -1,5 +1,7 @@
 package org.project.config;
 
+import org.springframework.util.AntPathMatcher;
+import ch.qos.logback.core.net.SyslogOutputStream;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,9 +43,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Value("${security.public.urls}")
     private List<String> publicUrls;
 
+    private static final AntPathMatcher pathMatcher = new AntPathMatcher();
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return publicUrls.contains(request.getServletPath());
+//        System.out.println("request.ServletPath." + request.getServletPath());
+//        System.out.println("public url: inside shouldNot filter"+publicUrls);
+//        System.out.println("check contains  " + publicUrls.contains(request.getServletPath()));
+        String requestPath = request.getServletPath();
+
+        return publicUrls.stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, requestPath));
     }
 
     @Override

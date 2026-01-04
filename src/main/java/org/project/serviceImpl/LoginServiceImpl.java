@@ -68,7 +68,7 @@ public class LoginServiceImpl implements LoginService {
     private final UserTokenService userTokenService;
 
     private static final Logger log =
-            LoggerFactory.getLogger(ClassName.class);
+            LoggerFactory.getLogger(LoginServiceImpl.class);
 
     /**
      * Constructor-based dependency injection

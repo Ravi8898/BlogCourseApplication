@@ -1,5 +1,6 @@
 package org.project.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.ArticleRequest;
 import org.project.dto.requestDto.RegisterRequest;
@@ -33,7 +34,6 @@ public class ArticleController {
             LoggerFactory.getLogger(ArticleController.class);
 
     /**
-     * API to create a new article.
      * The article is created for the currently logged-in user.
      * Author information is extracted internally using JWT token.
      *
@@ -41,6 +41,7 @@ public class ArticleController {
      * @param servletRequest HttpServletRequest used to access Authorization header
      * @return ResponseEntity containing ApiResponse with ArticleResponse
      */
+    @Operation(summary = "create a new article.")
     @PostMapping("/createArticle")
     public ResponseEntity<ApiResponse<ArticleResponse>> createArticle(
             @RequestBody ArticleRequest request, HttpServletRequest servletRequest) {
@@ -59,10 +60,9 @@ public class ArticleController {
 
     }
     /**
-     * API to fetch all articles.
-     * The article is fetched for the admin.
      * @return ResponseEntity containing ApiResponse with List of ArticleResponse
      */
+    @Operation(summary = "fetch all articles (article is fetched for the admin).")
     @GetMapping("/getAllArticles")
     public ResponseEntity<ApiResponse<List<ArticleResponse>>> getAllArticles(){
         log.info("getAllArticles API called");
@@ -79,11 +79,10 @@ public class ArticleController {
     }
 
     /**
-     * Fetch article details by articleId.
-     *
      * @param articleId ID of the article to be fetched
      * @return ApiResponse containing ArticleResponse if found
      */
+    @Operation(summary = "Fetch article details by articleId.")
     @GetMapping("/getArticleById")
     public ResponseEntity<ApiResponse<ArticleResponse>> getArticleById(
             @RequestParam("articleId") Long articleId){
