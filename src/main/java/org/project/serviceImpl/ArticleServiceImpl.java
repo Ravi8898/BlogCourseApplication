@@ -65,6 +65,7 @@ public class ArticleServiceImpl implements ArticleService {
      * @param servletRequest HTTP request used to extract Authorization header
      * @return ApiResponse containing created article details
      */
+    @Override
     public ApiResponse<ArticleResponse> createArticle(ArticleRequest request, HttpServletRequest servletRequest) {
 
         log.info("Create Article service started");
@@ -124,7 +125,8 @@ public class ArticleServiceImpl implements ArticleService {
                     savedArticle.getReviewedBy(),
                     savedArticle.getReviewedAt()
             );
-            log.info("Create Article service completed successfully");;
+            log.info("Create Article service completed successfully");
+            ;
 
             return new ApiResponse<>(
                     SUCCESS,
@@ -163,7 +165,7 @@ public class ArticleServiceImpl implements ArticleService {
      * @return Path of the saved file as String
      * @throws IOException if file creation or write fails
      */
-    private String saveContentToFile(String content, Long authorId) throws IOException{
+    private String saveContentToFile(String content, Long authorId) throws IOException {
 
         try {
             log.info("Starting file save operation for authorId={}", authorId);
@@ -218,12 +220,12 @@ public class ArticleServiceImpl implements ArticleService {
             log.info("File written successfully: {}", filePath);
 
             return filePath.toString();
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
             throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
         }
     }
+
     /**
      * Fetch all active articles.
      */
@@ -233,9 +235,9 @@ public class ArticleServiceImpl implements ArticleService {
         log.info("getAllArticles method called");
 
         ApiResponse<List<ArticleResponse>> response;
-        try{
+        try {
             // Fetch all active articles
-            List<Article> articleList= articleRepository.findByIsActive("Y");
+            List<Article> articleList = articleRepository.findByIsActive("Y");
 
             log.info("Articles fetched from repository: {}", articleList);
 
@@ -251,7 +253,7 @@ public class ArticleServiceImpl implements ArticleService {
 
             // Map each article entity to response DTO
             List<ArticleResponse> articleResponses = articleList.stream()
-                    .map( article -> {
+                    .map(article -> {
 
                                 return new ArticleResponse(
                                         article.getId(),
@@ -276,12 +278,11 @@ public class ArticleServiceImpl implements ArticleService {
                     articleResponses
             );
 
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
 
             log.error("Error while fetching articles", ex);
 
-            response =  new ApiResponse<>(
+            response = new ApiResponse<>(
                     FAILED,
                     FETCH_ARTICLE_FAILED,
                     HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -298,13 +299,14 @@ public class ArticleServiceImpl implements ArticleService {
      * @param articleId ID of the article to be fetched
      * @return ApiResponse containing ArticleResponse if found
      */
-    public ApiResponse<ArticleResponse> getArticleById(Long articleId){
+    @Override
+    public ApiResponse<ArticleResponse> getArticleById(Long articleId) {
 
         log.info("getArticleById service called with articleId={}", articleId);
 
         ApiResponse<ArticleResponse> response;
 
-        try{
+        try {
             // Fetch article from repository
             Optional<Article> articleOptional = articleRepository.findById(articleId);
 
@@ -318,36 +320,134 @@ public class ArticleServiceImpl implements ArticleService {
 
                 // Map Article entity to ArticleResponse DTO
                 ArticleResponse articleResponse = new ArticleResponse(
-                       article.getId(),
-                       article.getTitle(),
-                       article.getDescription(),
-                       article.getPdfPath(),
-                       article.getArticleStatus(),
-                       article.getAuthorId(),
-                       article.getReviewMessage(),
-                       article.getReviewedBy(),
-                       article.getReviewedAt()
-            );
+                        article.getId(),
+                        article.getTitle(),
+                        article.getDescription(),
+                        article.getPdfPath(),
+                        article.getArticleStatus(),
+                        article.getAuthorId(),
+                        article.getReviewMessage(),
+                        article.getReviewedBy(),
+                        article.getReviewedAt()
+                );
 
                 log.info("ArticleResponse prepared successfully for articleId={}", articleId);
 
                 response = new ApiResponse<>(
                         SUCCESS, FETCH_ARTICLE_SUCCESS, HttpStatus.OK.value(), articleResponse
                 );
-            }
-            else {
+            } else {
                 // Article not found
                 log.info("No article found for articleId={}", articleId);
                 response = new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
             }
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             // Handle unexpected exceptions
             log.error("Exception occurred while fetching article by articleId={}", articleId, ex);
             response = new ApiResponse<>(FAILED, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         // Log method exit
         log.info("getArticleById service completed for articleId={}", articleId);
+        return response;
+    }
+
+
+    /**
+     * Fetch all active articles created by the currently logged-in user.
+     *
+     * The userId is extracted from the JWT token present in the Authorization header.
+     *
+     * @param servletRequest HTTP request used to extract the Authorization header
+     * @return ApiResponse containing a list of ArticleResponse
+     */
+    @Override
+    public ApiResponse<List<ArticleResponse>> getAllArticlesByUserId(HttpServletRequest servletRequest) {
+
+        log.info("getAllArticlesByUserId service called for user");
+
+        ApiResponse<List<ArticleResponse>> response;
+
+        try{
+            String authHeader = servletRequest.getHeader("Authorization");
+            log.info("Authorization header received for getAllArticlesByUserId API");
+
+            // Extract JWT token by removing 'Bearer ' prefix
+            String token = authHeader.substring(7);
+            log.info("JWT token extracted successfully for getAllArticlesByUserId API");
+
+            // Fetch token details
+            Optional<UserToken> userTokenOptional =
+                    userTokenRepository.findByToken(token);
+
+            Long authorId = null;
+
+            // // If token exists, extract userId as authorId
+            if (userTokenOptional.isPresent()) {
+                authorId = userTokenOptional.get().getUserId();
+                log.info("Author identified with userId={} for getAllArticlesByUserId API", authorId);
+            }
+
+            if (authorId == null) {
+                log.error("UserId could not be extracted from token");
+                return new ApiResponse<>(
+                        FAILED,
+                        USER_NOT_FOUND,
+                        HttpStatus.UNAUTHORIZED.value(),
+                        null
+                );
+            }
+            String isActive= "Y";
+            List<Article> userArticleList = articleRepository.findByAuthorIdAndIsActive(authorId, isActive);
+
+            if(userArticleList.isEmpty()){
+
+                log.info("No active articles found for userId={}", authorId);
+                return new ApiResponse<>(
+                        SUCCESS,
+                        DATA_NOT_FOUND,
+                        HttpStatus.OK.value(),
+                        List.of()
+                );
+            }
+
+            // Map each article entity of the user to response DTO
+            List<ArticleResponse> articleResponse = userArticleList.stream()
+                    .map( article -> {
+
+                                return new ArticleResponse(
+                                article.getId(),
+                                article.getTitle(),
+                                article.getDescription(),
+                                article.getPdfPath(),
+                                article.getArticleStatus(),
+                                article.getAuthorId(),
+                                article.getReviewMessage(),
+                                article.getReviewedBy(),
+                                article.getReviewedAt()
+                                );
+                    }
+                    ).toList();
+
+            log.info("Successfully mapped {} List of articles of a user", articleResponse.size());
+
+            response= new ApiResponse<>(
+                    SUCCESS,
+                    FETCH_ARTICLE_SUCCESS,
+                    HttpStatus.OK.value(),
+                    articleResponse
+            );
+        }
+        catch (Exception ex){
+            log.error("Error while fetching articles", ex);
+
+            response = new ApiResponse<>(
+                    FAILED,
+                    FETCH_ARTICLE_FAILED,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
+
         return response;
     }
 }

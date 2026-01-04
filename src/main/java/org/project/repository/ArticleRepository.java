@@ -11,6 +11,6 @@ import java.util.Optional;
 @Repository
 public interface ArticleRepository extends JpaRepository<Article,Long> {
     List<Article> findByIsActive(String isActive);
-
+    List<Article> findByAuthorIdAndIsActive(Long authorId, String isActive);
 
 }
