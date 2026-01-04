@@ -6,6 +6,7 @@ import org.project.dto.requestDto.RegisterRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.ArticleResponse;
 import org.project.dto.responseDto.RegisterResponse;
+import org.project.dto.responseDto.UserResponse;
 import org.project.model.Article;
 import org.project.service.ArticleService;
 import org.project.service.LoginService;
@@ -76,4 +77,38 @@ public class ArticleController {
                 .status(response.getStatusCode())
                 .body(response);
     }
+
+    /**
+     * Fetch article details by articleId.
+     *
+     * @param articleId ID of the article to be fetched
+     * @return ApiResponse containing ArticleResponse if found
+     */
+    @GetMapping("/getArticleById")
+    public ResponseEntity<ApiResponse<ArticleResponse>> getArticleById(
+            @RequestParam("articleId") Long articleId){
+
+        log.info("Received request to fetch article with articleId={}", articleId);
+
+        // Call service layer to fetch article details
+        ApiResponse<ArticleResponse> response = articleService.getArticleById(articleId);
+
+        // Check if service returned SUCCESS status
+        if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
+
+            log.info("Article fetched successfully for articleId={}", articleId);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(response);
+        }
+
+        log.error("Failed to fetch article for articleId={}, status={}",
+                articleId, response.getStatus());
+
+        // Return error response
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
+    }
+
+
 }

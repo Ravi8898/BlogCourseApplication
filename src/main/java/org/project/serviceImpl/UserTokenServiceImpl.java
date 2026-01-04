@@ -1,5 +1,6 @@
 package org.project.serviceImpl;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.UserTokenRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.RegisterResponse;
@@ -134,42 +135,49 @@ public class UserTokenServiceImpl implements UserTokenService {
                 });
     }
 
-    //Revokes all active tokens associated with a specific user.
-    @Override
-    public void revokeAllTokensForUser(Long userId) {
-
-        log.info("Revoking all tokens for userId: {}", userId);
-
-        //revoke all tokens of given user from database
-        userTokenRepository.revokeAllTokensByUserId(userId);
-
-        log.info("All tokens revoked for userId: {}", userId);
-    }
 
     /**
-     * Logs out a user from all active sessions except the current one.
-     * @param userTokenRequest contains userId and the current active token
+     * revoke a user from all active sessions except the current one.
+     * @param httpServletRequest contains userId and the current active token
+     *
      */
     @Override
-    public ApiResponse<?> revokeAllTokensByUserId(UserTokenRequest userTokenRequest) {
+    public ApiResponse<?> revokeAllTokensByUserId(HttpServletRequest httpServletRequest) {
 
-        log.info("Revoke all tokens request received: {}", userTokenRequest);
-
+        Long userId = 0L;
+        String authToken = "";
         ApiResponse<?> response;
         try {
+
+            String authHeader = httpServletRequest.getHeader("Authorization");    // Extract Authorization header from the incoming request
+            authToken = authHeader.substring(7);     // Extract JWT token by removing "Bearer " prefix
+
+            // Fetch the current active token entry from the database
+            // This token represents the current logged-in session/device
+            Optional<UserToken> userTokenOptional =  userTokenRepository.findByToken(authToken);
+
+
+            if (userTokenOptional.isPresent()) {
+                userId = userTokenOptional.get().getUserId();
+            }
+            log.info("Received request to revoke all tokens for userId: {}", userId);
+
+
+            log.info("Revoke all tokens request received: {}", userId);
             // Fetch all tokens for user in a List which has all fields of UserToken Entity
             List<UserToken> userTokenList =
-                    userTokenRepository.findByUserId(userTokenRequest.getUserId());
+                    userTokenRepository.findByUserId(userId);
 
-            log.info("Fetched tokens for userId {} : {}", userTokenRequest.getUserId(), userTokenList);
+            log.info("Fetched tokens for userId {} : {}", userId, userTokenList);
 
             //if List is not empty
             if (!userTokenList.isEmpty()) {
 
                 // Find current token to exclude from revocation
+                String finalAuthToken = authToken;
                 Optional<UserToken> currentToken =
                         userTokenList.stream()
-                                .filter(userToken -> userToken.getToken().equals(userTokenRequest.getCurrentToken()))
+                                .filter(userToken -> userToken.getToken().equals(finalAuthToken))
                                 .findFirst();
 
                 log.info("Current active token identified: {}", currentToken);
@@ -185,18 +193,18 @@ public class UserTokenServiceImpl implements UserTokenService {
                 // Save all updated UserToken entities so token revocation is applied in the database
                 userTokenRepository.saveAll(userTokenList);
 
-                log.info("All sessions revoked successfully for userId: {}", userTokenRequest.getUserId());
+                log.info("All sessions revoked successfully for userId: {}", userId);
 
                 response = new ApiResponse<>(SUCCESS, ALL_SESSION_LOGOUT_SUCCESS, HttpStatus.OK.value(), null);
             }
             else {
-                log.info("No tokens found for userId: {}", userTokenRequest.getUserId());
+                log.info("No tokens found for userId: {}", userId);
                 response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
             }
 
         }catch (Exception ex){
             // Exception during revoke-all
-            log.error("Exception occurred while revoking all tokens for request: {}", userTokenRequest, ex);
+            log.error("Exception occurred while revoking all tokens for userId: {} & userToken {}", userId,authToken, ex);
             response = new ApiResponse<>(FAILED, ALL_SESSION_LOGOUT_FAILED_500, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
         }
         return response;

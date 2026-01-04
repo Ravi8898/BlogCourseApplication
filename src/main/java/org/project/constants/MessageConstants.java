@@ -50,5 +50,5 @@ public class MessageConstants {
     public static final String ARTICLE_FILE_SAVE_FAILED = "Failed to save article content file.";
     public static final String FETCH_ARTICLE_FAILED = "Failed to fetch articles.";
     public static final String FETCH_ARTICLE_SUCCESS = "Articles fetched successfully.";
-
+    public static final String ARTICLE_NOT_FOUND = "Article not found.";
 }

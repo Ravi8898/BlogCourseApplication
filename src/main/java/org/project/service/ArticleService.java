@@ -13,4 +13,5 @@ public interface ArticleService {
     ApiResponse<ArticleResponse> createArticle(ArticleRequest request, HttpServletRequest servletRequest);
     ApiResponse<List<ArticleResponse>> getAllArticles();
 
+    ApiResponse<ArticleResponse> getArticleById(Long articleId);
 }
