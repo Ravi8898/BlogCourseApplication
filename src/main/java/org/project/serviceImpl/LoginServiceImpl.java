@@ -163,9 +163,9 @@ public class LoginServiceImpl implements LoginService {
 
             log.info("Authentication successful for username: {}", request.getUsername());
 
-            // Fetch user details after successful authentication
-            User user = userRepository.findByEmailOrPhoneNumber(request.getUsername(),
-                            request.getUsername())
+            // Fetch user details with the is_active status after successful authentication
+            User user = userRepository.findByEmailOrPhoneNumberAndIsActive(request.getUsername(),
+                            request.getUsername(),"Y")
                     .orElseThrow(() -> new RuntimeException(USER_NOT_FOUND));
 
             log.info("User fetched after authentication: {}", user);
