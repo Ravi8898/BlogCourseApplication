@@ -155,7 +155,7 @@ public class UserServiceImpl implements UserService {
                         );
                     }).toList();
 
-            log.info("Successfully mapped {} users to UserResponse", userResponses.size());
+            log.info("Successfully mapped {} List of users to List of UserResponse", userResponses.size());
 
             response = new ApiResponse<>(
                     SUCCESS,
