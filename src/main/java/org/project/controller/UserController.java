@@ -2,6 +2,7 @@ package org.project.controller;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
 import org.project.dto.requestDto.UpdateUserRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.UserResponse;
@@ -25,9 +26,8 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    /**
-     * Fetch user details by userId
-     */
+
+    @Operation(summary = "Fetch user details by userId")
     @GetMapping("/getUserById")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @RequestParam("userId") Long userId) {
@@ -49,9 +49,8 @@ public class UserController {
                 .body(response);
     }
 
-    /**
-     * Fetch all active users
-     */
+
+    @Operation(summary = "Fetch all active users")
     @GetMapping("/getAllUsers")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
 
@@ -66,9 +65,8 @@ public class UserController {
                 .body(response);
     }
 
-    /**
-     * Soft delete (deactivate) user by userId
-     */
+
+    @Operation(summary = "Soft delete (deactivate) user by userId")
     @DeleteMapping("/deleteUserById")
     public ResponseEntity<ApiResponse<Void>> deleteUserById(
             @RequestParam("userId") Long userId) {
@@ -82,9 +80,8 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    /**
-     * Update user details by userId
-     */
+
+    @Operation(summary = "Update user details by userId")
     @PostMapping("/updateUserById")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserById(
             @RequestBody UpdateUserRequest updateUserRequest) {

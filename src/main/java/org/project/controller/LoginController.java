@@ -2,6 +2,7 @@ package org.project.controller;
 
 import static org.project.constants.MessageConstants.*;
 
+import io.swagger.v3.oas.annotations.Operation;
 import org.project.dto.requestDto.LoginRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.LoginResponse;
@@ -24,11 +25,9 @@ public class LoginController {
     private LoginService loginService;
 
     private static final Logger log =
-            LoggerFactory.getLogger(ClassName.class);
+            LoggerFactory.getLogger(LoginController.class);
 
-    /**
-     * Register a new user
-     */
+    @Operation(summary = "Register a new user")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @RequestBody RegisterRequest request) {
@@ -67,9 +66,7 @@ public class LoginController {
         }
     }
 
-    /**
-     * Authenticate user and return JWT token
-     */
+    @Operation(summary = "Authenticate user and return JWT token")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @RequestBody LoginRequest request) {
@@ -94,9 +91,8 @@ public class LoginController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Logout user by revoking current JWT token
-     */
+
+    @Operation(summary = "Logout user by revoking current JWT token")
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<RegisterResponse>> logout(
             @RequestHeader("Authorization") String authorizationHeader) {
