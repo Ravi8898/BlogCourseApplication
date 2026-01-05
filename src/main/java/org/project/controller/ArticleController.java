@@ -109,5 +109,38 @@ public class ArticleController {
                 .body(response);
     }
 
+    /**
+     * Fetch all active articles created by the currently logged-in user.
+     *
+     * The userId is extracted from the JWT token present in the Authorization header.
+     *
+     * @param servletRequest HTTP request used to extract the Authorization header
+     * @return ApiResponse containing a list of ArticleResponse
+     */
+    @GetMapping("/getAllArticlesByUserId")
+    public ResponseEntity<ApiResponse<List<ArticleResponse>>> getAllArticlesByUserId(
+            HttpServletRequest servletRequest){
+
+        log.info("Received request to fetch all articles of user");
+
+        // Call service layer to fetch articles
+        ApiResponse<List<ArticleResponse>> response = articleService.getAllArticlesByUserId(servletRequest);
+
+        // Check if service returned SUCCESS status
+        if (response.getStatus().equalsIgnoreCase(SUCCESS)) {
+
+            log.info("Articles fetched successfully for user");
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(response);
+        }
+
+        log.error("Failed to fetch all articles for user, status={}",
+                 response.getStatus());
+
+        // Return error response
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
+    }
 
 }
