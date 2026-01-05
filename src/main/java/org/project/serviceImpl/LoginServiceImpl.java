@@ -97,52 +97,66 @@ public class LoginServiceImpl implements LoginService {
 
         log.info("Register request received");
 
-        try{
-            // Check if username already exists
-            if (userRepository.existsByEmail(request.getEmail()) || userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+        try {
+            // Check if user already exists
+            if (userRepository.existsByEmail(request.getEmail()) ||
+                    userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+
                 log.info("Registration failed - email or phone already exists");
                 return null;
             }
 
-            // Save Address
-            Address address = addressRequestMapper.map(request.getAddress());
-            log.info("Address mapped from request: {}", address);
+            Long addressId = null;
+            AddressResponse addressResponse = null;
 
-            Address savedAddress = addressRepository.save(address);
-            log.info("Address saved successfully: {}", savedAddress);
+            if (request.getAddress() != null) {
 
-            AddressResponse addressResponse = addressResponseMapper.map(address);
+                log.info("Address provided, processing address");
 
-            String isActive = "Y";
+                Address address = addressRequestMapper.map(request.getAddress());
+                Address savedAddress = addressRepository.save(address);
 
-            // Build User entity and encrypt password
+                log.info("Address saved successfully with id: {}", savedAddress.getId());
+
+                addressId = savedAddress.getId();
+                addressResponse = addressResponseMapper.map(savedAddress);
+            } else {
+                log.info("No address provided, skipping address save");
+            }
+
+            // Build User entity
             User user = User.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
-                    .addressId(savedAddress.getId())
+                    .addressId(addressId) // ✅ can be null
                     .role(request.getRole())
-                    .isActive(isActive)
+                    .isActive("Y")
                     .build();
 
-            log.info("User entity built: {}", user);
+            log.info("User entity built");
 
-            // Save user to database
             User savedUser = userRepository.save(user);
-            log.info("User saved successfully: {}", savedUser);
+            log.info("User saved successfully with userId={}", savedUser.getId());
 
-            return new RegisterResponse(savedUser.getId(), savedUser.getFirstName(),
-                    savedUser.getLastName(), savedUser.getEmail(),
-                    savedUser.getPhoneNumber(), savedUser.getRole(), addressResponse);
+            return new RegisterResponse(
+                    savedUser.getId(),
+                    savedUser.getFirstName(),
+                    savedUser.getLastName(),
+                    savedUser.getEmail(),
+                    savedUser.getPhoneNumber(),
+                    savedUser.getRole(),
+                    addressResponse // ✅ null if not provided
+            );
 
         } catch (Exception e) {
-            //unexpected exception during registration
             log.error("Exception occurred during user registration", e);
             throw new RuntimeException(SOMETHING_WENT_WRONG, e);
         }
     }
+
 
     /**
      * Authenticates user credentials and returns login response
@@ -178,13 +192,27 @@ public class LoginServiceImpl implements LoginService {
             userTokenService.saveToken(user, token, LocalDateTime.now().plusHours(1));
             log.info("Token saved with expiry for userId: {}", user.getId());
 
-            Address address = addressRepository
-                    .findById(user.getAddressId())
-                    .orElse(null);
+            AddressResponse addressResponse = null;
 
-            log.info("Address fetched for login response: {}", address);
+            if (user.getAddressId() != null) {
 
-            AddressResponse addressResponse = addressResponseMapper.map(address);
+                Address address = addressRepository.getAddressById(user.getAddressId());
+                addressResponse = addressResponseMapper.map(address);
+
+                log.info(
+                        "Address fetched during login | userId={} | addressId={}",
+                        user.getId(),
+                        user.getAddressId()
+                );
+
+            } else {
+
+                log.info(
+                        "User logged in without address | userId={}",
+                        user.getId()
+                );
+            }
+
 
             // Prepare response DTO
             LoginResponse response = new LoginResponse(user.getId(),

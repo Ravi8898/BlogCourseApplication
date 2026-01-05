@@ -36,6 +36,5 @@ public class RegisterRequest {
     private UserRole role;
 
     @Valid
-    @NotNull(message = "Address is required")
     private AddressRequest address;
 }
