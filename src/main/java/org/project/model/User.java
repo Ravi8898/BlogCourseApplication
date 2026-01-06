@@ -47,7 +47,7 @@ public class User extends BaseAuditEntity {
     @Column(nullable = false)
     private UserRole role;
 
-    @Column(name = "addressId")
+    @Column(name = "addressId", nullable = true)
     private Long addressId;
 
     private String isActive;

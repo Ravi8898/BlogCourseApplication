@@ -138,11 +138,14 @@ public class UserServiceImpl implements UserService {
                     .map(user -> {
 
                         // Fetch address for each user
-                        Address address = addressRepository.getAddressById(user.getAddressId());
+                        AddressResponse addressResponse = null;
 
+                        if (user.getAddressId() != null) {
+                            Address address = addressRepository.getAddressById(user.getAddressId());
+                            addressResponse = addressResponseMapper.map(address);
                         log.info("Fetching address for user during getAllUsers | userId={} | address={}", user.getId(), address);
+                        }
 
-                        AddressResponse addressResponse = addressResponseMapper.map(address);
 
                         return new UserResponse(
                                 user.getId(),
@@ -230,11 +233,6 @@ public class UserServiceImpl implements UserService {
 
                 log.info("Existing user before update: {}", user);
 
-                // Fetch address entity
-                Address address = addressRepository.getAddressById(user.getAddressId());
-
-                log.info("Address fetched for update: {}", address);
-
                 // Update only provided user fields and trigger logout if sensitive details (email/phone) are changed
                 if (request.getFirstName() != null) {
                     user.setFirstName(request.getFirstName());
@@ -258,17 +256,37 @@ public class UserServiceImpl implements UserService {
                     shouldLogout = true;
                 }
 
-                // Update address details if provided
-                if (request.getAddressRequest() != null && user.getAddressId() != null) {
+                Address address = null;
 
-                    // Update address entity from request
-                    addressRequestMapper.updateEntity(request.getAddressRequest(), address);
+                // Update or create address if provided
+                if (request.getAddressRequest() != null) {
 
-                    // Save updated address
-                    addressRepository.save(address);
+                    // CASE 1: Address already exists → UPDATE
+                    if (user.getAddressId() != null) {
 
-                    log.info("Address updated and saved in database: {}", address);
+                        address = addressRepository.getAddressById(user.getAddressId());
+                        log.info("Existing address fetched for update: {}", address);
+
+                        addressRequestMapper.updateEntity(request.getAddressRequest(), address);
+                        address = addressRepository.save(address);
+
+                        log.info("Address updated successfully: {}", address);
+
+                    }
+                    // CASE 2: Address does NOT exist → CREATE
+                    else {
+
+                        log.info("No address found for user. Creating new address for userId={}", user.getId());
+
+                        address = addressRequestMapper.map(request.getAddressRequest());
+                        address = addressRepository.save(address);
+
+                        user.setAddressId(address.getId());
+
+                        log.info("New address created and linked to user. addressId={}", address.getId());
+                    }
                 }
+
 
                 // Save updated user
                 User updatedUser = userRepository.save(user);
@@ -281,7 +299,11 @@ public class UserServiceImpl implements UserService {
                     log.info("All tokens revoked for userId: {}", user.getId());
                 }
 
-                AddressResponse addressResponse = addressResponseMapper.map(address);
+                AddressResponse addressResponse = null;
+
+                if (address != null) {
+                    addressResponse = addressResponseMapper.map(address);
+                }
 
                 UserResponse userResponse = new UserResponse(
                         updatedUser.getId(),
