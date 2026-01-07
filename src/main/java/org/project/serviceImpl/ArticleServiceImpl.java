@@ -4,12 +4,12 @@ import static org.project.constants.MessageConstants.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.ArticleRequest;
 import org.project.dto.requestDto.RegisterRequest;
-import org.project.dto.responseDto.ApiResponse;
-import org.project.dto.responseDto.ArticleResponse;
-import org.project.dto.responseDto.RegisterResponse;
-import org.project.dto.responseDto.UserResponse;
+import org.project.dto.requestDto.UpdateArticleRequest;
+import org.project.dto.responseDto.*;
 import org.project.enums.ArticleStatus;
+import org.project.model.Address;
 import org.project.model.Article;
+import org.project.model.User;
 import org.project.model.UserToken;
 import org.project.repository.ArticleRepository;
 import org.project.repository.UserRepository;
@@ -450,4 +450,104 @@ public class ArticleServiceImpl implements ArticleService {
 
         return response;
     }
+
+    /**
+     * Update article details.
+     * Allows updating title, description, and content of an active article.
+     * If content is updated, the old PDF file is deleted and a new one is created.
+     */
+    @Override
+    public ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest request) {
+
+        log.info("updateArticleById called with request: {}", request);
+
+        ApiResponse<ArticleResponse> response;
+
+        try {
+            String isActive = "Y";
+
+            // Fetch active article for update
+            Optional<Article> articleOptional =
+                    articleRepository.findByIdAndIsActive(
+                            request.getArticleId(), isActive
+                    );
+
+            log.info("Article fetched for update: {}", articleOptional);
+
+            if (articleOptional.isPresent()) {
+
+                Article article = articleOptional.get();
+                log.info("Existing article before update: {}", article);
+
+                // Validate articleId
+                if (request.getArticleId() == null) {
+                    return new ApiResponse<>(FAILED, "Article ID is required", HttpStatus.BAD_REQUEST.value(), null);
+                }
+
+                // Update only provided fields
+                if (request.getTitle() != null) {
+                    article.setTitle(request.getTitle());
+                }
+
+                if (request.getDescription() != null) {
+                    article.setDescription(request.getDescription());
+                }
+
+                // Replace article content if new content is provided
+                if (request.getContent() != null) {
+
+                    if (article.getPdfPath() != null) {
+                        Files.deleteIfExists(Paths.get(article.getPdfPath()));
+                    }
+
+                    String newPdfPath = saveContentToFile(
+                            request.getContent(),
+                            article.getAuthorId()
+                    );
+
+                    article.setPdfPath(newPdfPath);
+                }
+
+                // Save updated article
+                Article updatedArticle = articleRepository.save(article);
+                log.info("Article updated and saved in database: {}", updatedArticle);
+
+                ArticleResponse articleResponse = new ArticleResponse(
+                        updatedArticle.getId(),
+                        updatedArticle.getTitle(),
+                        updatedArticle.getDescription(),
+                        updatedArticle.getPdfPath(),
+                        updatedArticle.getArticleStatus(),
+                        updatedArticle.getAuthorId(),
+                        updatedArticle.getReviewMessage(),
+                        updatedArticle.getReviewedBy(),
+                        updatedArticle.getReviewedAt()
+                );
+
+                response = new ApiResponse<>(SUCCESS, ARTICLE_UPDATE_SUCCESS, HttpStatus.OK.value(), articleResponse);
+
+            } else {
+                // Article not found or inactive
+                log.info("Article not found for update, articleId: {}", request.getArticleId());
+                response = new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
+            }
+
+        } catch (IOException ex) {
+            // File handling error during content update
+            log.error("Error while updating article PDF", ex);
+            response = new ApiResponse<>(FAILED, ARTICLE_FILE_SAVE_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null
+            );
+
+        } catch (Exception ex) {
+            // Unexpected error during article update
+            log.error("Error while updating article", ex);
+            response = new ApiResponse<>(FAILED, ARTICLE_UPDATE_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null
+            );
+        }
+
+        return response;
+    }
+
+
+
 }

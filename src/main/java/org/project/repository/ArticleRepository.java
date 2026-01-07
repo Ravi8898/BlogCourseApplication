@@ -1,6 +1,7 @@
 package org.project.repository;
 
 import org.project.model.Article;
+import org.project.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,5 +13,7 @@ import java.util.Optional;
 public interface ArticleRepository extends JpaRepository<Article,Long> {
     List<Article> findByIsActive(String isActive);
     List<Article> findByAuthorIdAndIsActive(Long authorId, String isActive);
+
+    Optional<Article> findByIdAndIsActive(Long id, String isActive);
 
 }

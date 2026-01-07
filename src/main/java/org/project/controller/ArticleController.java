@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.ArticleRequest;
 import org.project.dto.requestDto.RegisterRequest;
+import org.project.dto.requestDto.UpdateArticleRequest;
+import org.project.dto.requestDto.UpdateUserRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.ArticleResponse;
 import org.project.dto.responseDto.RegisterResponse;
@@ -142,5 +144,31 @@ public class ArticleController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
+
+    /**
+     * API to update an existing article.
+     * Accepts article update details in request body and delegates
+     * the update operation to the service layer.
+     */
+    @PostMapping("/updateArticleById")
+    public ResponseEntity<ApiResponse<ArticleResponse>> updateArticleById(
+            @RequestBody UpdateArticleRequest updateArticleRequest) {
+
+        log.info("Received request to update article: {}", updateArticleRequest);
+
+        // Call service layer to update article
+        ApiResponse<ArticleResponse> response =
+                articleService.updateArticleById(updateArticleRequest);
+
+        // Log response status for the update operation
+        log.info("Update user response for articleId {} : {}",
+                updateArticleRequest.getArticleId(), response.getStatus());
+
+        // Return response with appropriate HTTP status
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+    }
+
 
 }

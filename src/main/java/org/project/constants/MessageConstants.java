@@ -51,4 +51,6 @@ public class MessageConstants {
     public static final String FETCH_ARTICLE_FAILED = "Failed to fetch articles.";
     public static final String FETCH_ARTICLE_SUCCESS = "Articles fetched successfully.";
     public static final String ARTICLE_NOT_FOUND = "Article not found.";
+    public static final String ARTICLE_UPDATE_FAILED = "Article updation failed. Something went wrong.";
+    public static final String ARTICLE_UPDATE_SUCCESS = "Profile updated successfully";
 }
