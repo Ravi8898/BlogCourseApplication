@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
 
@@ -461,6 +462,11 @@ public class ArticleServiceImpl implements ArticleService {
 
         log.info("updateArticleById called with request: {}", request);
 
+        // Validate articleId
+        if (request.getArticleId() == null) {
+            return new ApiResponse<>(FAILED, "Article ID is required", HttpStatus.BAD_REQUEST.value(), null);
+        }
+
         ApiResponse<ArticleResponse> response;
 
         try {
@@ -479,11 +485,6 @@ public class ArticleServiceImpl implements ArticleService {
                 Article article = articleOptional.get();
                 log.info("Existing article before update: {}", article);
 
-                // Validate articleId
-                if (request.getArticleId() == null) {
-                    return new ApiResponse<>(FAILED, "Article ID is required", HttpStatus.BAD_REQUEST.value(), null);
-                }
-
                 // Update only provided fields
                 if (request.getTitle() != null) {
                     article.setTitle(request.getTitle());
@@ -496,16 +497,14 @@ public class ArticleServiceImpl implements ArticleService {
                 // Replace article content if new content is provided
                 if (request.getContent() != null) {
 
-                    if (article.getPdfPath() != null) {
-                        Files.deleteIfExists(Paths.get(article.getPdfPath()));
+                    String pdfPath = article.getPdfPath();
+
+                    // If PDF already exists overwrite its content
+                    if (pdfPath != null && Files.exists(Paths.get(pdfPath))) {
+                        Files.write(
+                                Paths.get(pdfPath), request.getContent().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+
                     }
-
-                    String newPdfPath = saveContentToFile(
-                            request.getContent(),
-                            article.getAuthorId()
-                    );
-
-                    article.setPdfPath(newPdfPath);
                 }
 
                 // Save updated article
