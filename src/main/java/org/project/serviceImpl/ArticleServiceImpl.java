@@ -494,18 +494,39 @@ public class ArticleServiceImpl implements ArticleService {
                     article.setDescription(request.getDescription());
                 }
 
-                // Replace article content if new content is provided
                 if (request.getContent() != null) {
 
                     String pdfPath = article.getPdfPath();
+                    Path path = Paths.get(pdfPath);
 
-                    // If PDF already exists overwrite its content
-                    if (pdfPath != null && Files.exists(Paths.get(pdfPath))) {
-                        Files.write(
-                                Paths.get(pdfPath), request.getContent().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+                    if (Files.exists(path)) {
 
+                        try (PDDocument document = new PDDocument()) {
+
+                            PDPage page = new PDPage();
+                            document.addPage(page);
+
+                            try (PDPageContentStream contentStream =
+                                         new PDPageContentStream(document, page)) {
+
+                                contentStream.beginText();
+                                contentStream.setFont(PDType1Font.HELVETICA, 12);
+                                contentStream.setLeading(14.5f);
+                                contentStream.newLineAtOffset(50, 750);
+
+                                for (String line : request.getContent().split("\n")) {
+                                    contentStream.showText(line);
+                                    contentStream.newLine();
+                                }
+
+                                contentStream.endText();
+                            }
+
+                            document.save(pdfPath);
+                        }
                     }
                 }
+
 
                 // Save updated article
                 Article updatedArticle = articleRepository.save(article);
