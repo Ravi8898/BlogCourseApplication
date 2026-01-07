@@ -464,7 +464,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         // Validate articleId
         if (request.getArticleId() == null) {
-            return new ApiResponse<>(FAILED, "Article ID is required", HttpStatus.BAD_REQUEST.value(), null);
+            return new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.BAD_REQUEST.value(), null);
         }
 
         ApiResponse<ArticleResponse> response;
