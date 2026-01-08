@@ -20,6 +20,7 @@ public class MessageConstants {
     public static final String BAD_REQUEST = "Bad request.";
     public static final String SOMETHING_WENT_WRONG = "Something went wrong. Please try again later.";
     public static final String RESET_LINK_SUCCESS = "If email exists, reset link is sent.";
+    public static final String PASSWORD_RESET_SUCCESS ="Password reset successfully. Please login again.";
 
 
     //    JWT messages

@@ -3,6 +3,7 @@ package org.project.serviceImpl;
 import org.project.constants.MessageConstants;
 import org.project.dto.requestDto.ForgotPasswordRequest;
 import org.project.dto.requestDto.LoginRequest;
+import org.project.dto.requestDto.ResetPasswordRequest;
 import org.project.dto.responseDto.*;
 import org.project.mapper.AddressRequestMapper;
 import org.project.mapper.AddressResponseMapper;
@@ -13,6 +14,7 @@ import org.project.repository.AddressRepository;
 import org.project.repository.PasswordResetTokenRepository;
 import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
+import org.project.repository.UserTokenRepository;
 import org.project.security.JwtUtil;
 import org.project.service.EmailService;
 import org.project.service.LoginService;
@@ -85,17 +87,20 @@ public class LoginServiceImpl implements LoginService {
     private static final Logger log =
             LoggerFactory.getLogger(LoginServiceImpl.class);
 
+    private UserTokenRepository userTokenRepository;
+
     /**
      * Constructor-based dependency injection
      */
     public LoginServiceImpl(AuthenticationManager authenticationManager,
-                            UserRepository userRepository, AddressRepository addressRepository,PasswordResetTokenRepository passwordResetTokenRepository,
+                            UserRepository userRepository, AddressRepository addressRepository,PasswordResetTokenRepository passwordResetTokenRepository,UserTokenRepository userTokenRepository,
                             PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
                             UserTokenService userTokenService,EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.addressRepository = addressRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.userTokenRepository = userTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userTokenService = userTokenService;
@@ -375,6 +380,75 @@ public class LoginServiceImpl implements LoginService {
         }
 
         return response;
+    }
+
+    /**
+     * Resets the user's password using a valid password reset token.
+     *
+     * <p>This API performs the following:
+     * <ul>
+     *   <li>Validates the reset token (exists, unused, not expired)</li>
+     *   <li>Updates the user's password with an encoded value</li>
+     *   <li>Revokes all existing login tokens for the user</li>
+     *   <li>Marks the reset token as used</li>
+     * </ul>
+     *
+     * @param request contains reset token (extracted from link) and new password
+     * @return ApiResponse indicating success or failure of password reset
+     */
+    @Override
+    @Transactional
+    public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
+
+        try {
+            log.info("Reset password process started");
+
+            // 1. Fetch unused reset token
+            PasswordResetToken resetToken =
+                    passwordResetTokenRepository
+                            .findByTokenAndUsed(request.getToken(), "N")
+                            .orElseThrow(() ->
+                                    new RuntimeException("Invalid or expired reset token"));
+
+            // 2. Check token expiry
+            if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Reset token has expired");
+            }
+
+            // 3. Fetch user
+            User user = userRepository.findByIdAndIsActive(resetToken.getUserId(),"Y")
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // 4. Update password (always encode)
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+
+            // 5. Revoke all active login tokens
+            userTokenRepository.revokeAllTokensByUserId(user.getId());
+
+            // 6. Mark reset token as used
+            resetToken.setUsed("Y");
+            passwordResetTokenRepository.save(resetToken);
+
+            log.info("Password reset successful for userId={}", user.getId());
+
+            return new ApiResponse<>(
+                    SUCCESS,
+                    PASSWORD_RESET_SUCCESS,
+                    HttpStatus.OK.value(),
+                    null
+            );
+
+        } catch (Exception ex) {
+            log.error("Error during reset password process", ex);
+
+            return new ApiResponse<>(
+                    FAILED,
+                    SOMETHING_WENT_WRONG,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
     }
 
 }

@@ -2,6 +2,7 @@ package org.project.service;
 
 import org.project.dto.requestDto.ForgotPasswordRequest;
 import org.project.dto.requestDto.LoginRequest;
+import org.project.dto.requestDto.ResetPasswordRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.LoginResponse;
 import org.project.dto.responseDto.RegisterResponse;
@@ -15,4 +16,5 @@ public interface LoginService {
     ApiResponse<LoginResponse> login(LoginRequest request);
     ApiResponse<RegisterResponse> logout(String authorizationHeader);
     ApiResponse<Void> forgotPassword(ForgotPasswordRequest request);
+    ApiResponse<Void> resetPassword(ResetPasswordRequest request);
 }
