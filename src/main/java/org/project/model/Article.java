@@ -44,5 +44,7 @@ public class Article extends BaseAuditEntity {
 
     private LocalDateTime reviewedAt;
 
+    public String Content;
+
     private String isActive;
 }
