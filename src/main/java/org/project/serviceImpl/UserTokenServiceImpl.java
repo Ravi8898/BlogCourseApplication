@@ -142,7 +142,7 @@ public class UserTokenServiceImpl implements UserTokenService {
      *
      */
     @Override
-    public ApiResponse<?> revokeAllTokensByUserId(HttpServletRequest httpServletRequest) {
+    public ApiResponse<?> revokeAllTokensExceptCurrentTokenByUserId(HttpServletRequest httpServletRequest) {
 
         Long userId = 0L;
         String authToken = "";

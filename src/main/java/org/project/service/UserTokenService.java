@@ -13,6 +13,6 @@ public interface UserTokenService {
     boolean isTokenValid(String token);
     void revokeToken(String token);
     boolean isTokenExpired(String token);
-    ApiResponse<?> revokeAllTokensByUserId(HttpServletRequest httpServletRequest) ;
+    ApiResponse<?> revokeAllTokensExceptCurrentTokenByUserId(HttpServletRequest httpServletRequest) ;
 }
 
