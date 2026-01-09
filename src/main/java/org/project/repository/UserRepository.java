@@ -29,5 +29,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
            """)
     int deactivateUserById(@Param("id") Long id);
 
-
+    Optional<User> findByEmailAndIsActive(String email, String isActive);
 }

@@ -37,12 +37,12 @@ public class UserTokenController {
 
     @Operation(summary = "Revoke all active tokens for a user except the current session token")
     @PostMapping("/revokeAllTokensByUserId")
-    public ResponseEntity<ApiResponse<?>> revokeAllTokensByUserId(
+    public ResponseEntity<ApiResponse<?>> revokeAllTokensExceptCurrentTokenByUserId(
             HttpServletRequest httpServletRequest) {
 
 
         ApiResponse<?> response =
-                userTokenService.revokeAllTokensByUserId(httpServletRequest);
+                userTokenService.revokeAllTokensExceptCurrentTokenByUserId(httpServletRequest);
 
         log.info("Revoke all tokens response for userId {} : {}",
                 httpServletRequest, response.getStatus());

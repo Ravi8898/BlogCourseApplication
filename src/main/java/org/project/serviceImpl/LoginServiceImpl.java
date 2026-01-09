@@ -1,26 +1,29 @@
 package org.project.serviceImpl;
 
 import org.project.constants.MessageConstants;
+import org.project.dto.requestDto.ForgotPasswordRequest;
 import org.project.dto.requestDto.LoginRequest;
-import org.project.dto.responseDto.AddressResponse;
-import org.project.dto.responseDto.ApiResponse;
-import org.project.dto.responseDto.LoginResponse;
-import org.project.dto.responseDto.RegisterResponse;
+import org.project.dto.requestDto.ResetPasswordRequest;
+import org.project.dto.responseDto.*;
 import org.project.mapper.AddressRequestMapper;
 import org.project.mapper.AddressResponseMapper;
 import org.project.model.Address;
+import org.project.model.PasswordResetToken;
 import org.project.model.User;
 import org.project.repository.AddressRepository;
+import org.project.repository.PasswordResetTokenRepository;
 import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
+import org.project.repository.UserTokenRepository;
 import org.project.security.JwtUtil;
+import org.project.util.EmailUtil;
 import org.project.service.LoginService;
 import org.project.service.UserTokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.javapoet.ClassName;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,7 +33,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.project.constants.MessageConstants.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service implementation for Login & Registration operations.
@@ -58,6 +65,8 @@ public class LoginServiceImpl implements LoginService {
 
     private final AddressRepository addressRepository;
 
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+
     /**
      * Password encoder bean (BCrypt recommended)
      * Used for encrypting and validating passwords
@@ -67,22 +76,33 @@ public class LoginServiceImpl implements LoginService {
     private final JwtUtil jwtUtil;
     private final UserTokenService userTokenService;
 
+    private final EmailUtil emailUtil;
+
+    @Value("${frontend.reset.password.url}")
+    private String resetPasswordBaseUrl;
+
+
     private static final Logger log =
             LoggerFactory.getLogger(LoginServiceImpl.class);
+
+    private UserTokenRepository userTokenRepository;
 
     /**
      * Constructor-based dependency injection
      */
     public LoginServiceImpl(AuthenticationManager authenticationManager,
-                            UserRepository userRepository, AddressRepository addressRepository,
+                            UserRepository userRepository, AddressRepository addressRepository,PasswordResetTokenRepository passwordResetTokenRepository,UserTokenRepository userTokenRepository,
                             PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-                            UserTokenService userTokenService) {
+                            UserTokenService userTokenService,EmailUtil emailUtil) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.addressRepository = addressRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.userTokenRepository = userTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userTokenService = userTokenService;
+        this.emailUtil = emailUtil;
     }
 
     /**
@@ -269,4 +289,164 @@ public class LoginServiceImpl implements LoginService {
         }
         return response;
     }
+
+    /**
+     * Handles forgot password request.
+     * *
+     * This method:
+     * 1. Accepts user's email via ForgotPasswordRequest.
+     * 2. Checks if an active user exists for the given email.
+     * 3. If user does not exist, returns a generic success response
+     *    (to prevent user enumeration attacks).
+     * 4. If user exists:
+     *    - Generates a secure random reset token.
+     *    - Saves the token with expiry and unused status.
+     *    - Sends a password reset link to the user's email.
+     *
+     * @param request ForgotPasswordRequest containing user's email
+     * @return ApiResponse<Void> with generic success or failure response
+     */
+    @Override
+    public ApiResponse<Void> forgotPassword(ForgotPasswordRequest request) {
+
+        ApiResponse<Void> response;
+
+        try {
+            log.info("Forgot password process started");
+
+            // Fetch active user by email
+            Optional<User> userOpt =
+                    userRepository.findByEmailAndIsActive(request.getEmail(), "Y");
+
+            // If user does not exist, return generic success response
+            // This is intentional to prevent user enumeration
+            if (userOpt.isEmpty()) {
+
+                log.info("Forgot password requested for non-existing or inactive email");
+
+                return new ApiResponse<>(
+                        SUCCESS,
+                        RESET_LINK_SUCCESS,
+                        HttpStatus.OK.value(),
+                        null
+                );
+            }
+
+            User user = userOpt.get();
+
+            // Generate secure random token
+            String token = UUID.randomUUID().toString();
+
+            // Create password reset token entity with expiry
+            PasswordResetToken resetToken = PasswordResetToken.builder()
+                    .token(token)
+                    .userId(user.getId())
+                    .expiryTime(LocalDateTime.now().plusMinutes(15))
+                    .used("N")
+                    .build();
+
+            // Persist reset token
+            passwordResetTokenRepository.save(resetToken);
+
+            // Build password reset link for frontend
+            String resetLink = resetPasswordBaseUrl
+                    + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+
+            // Send password reset email
+            emailUtil.sendPasswordResetEmail(user.getEmail(), resetLink);
+
+            log.info("Password reset link sent successfully for userId={}", user.getId());
+
+            response = new ApiResponse<>(
+                    SUCCESS,
+                    RESET_LINK_SUCCESS,
+                    HttpStatus.OK.value(),
+                    null
+            );
+
+        } catch (Exception ex) {
+
+            // Log error without exposing sensitive data
+            log.error("Error occurred during forgot password process", ex);
+
+            response = new ApiResponse<>(
+                    FAILED,
+                    SOMETHING_WENT_WRONG,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
+
+        return response;
+    }
+
+    /**
+     * Resets the user's password using a valid password reset token.
+     *
+     * <p>This API performs the following:
+     * <ul>
+     *   <li>Validates the reset token (exists, unused, not expired)</li>
+     *   <li>Updates the user's password with an encoded value</li>
+     *   <li>Revokes all existing login tokens for the user</li>
+     *   <li>Marks the reset token as used</li>
+     * </ul>
+     *
+     * @param request contains reset token (extracted from link) and new password
+     * @return ApiResponse indicating success or failure of password reset
+     */
+    @Override
+    @Transactional
+    public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
+
+        try {
+            log.info("Reset password process started");
+
+            // 1. Fetch unused reset token
+            PasswordResetToken resetToken =
+                    passwordResetTokenRepository
+                            .findByTokenAndUsed(request.getToken(), "N")
+                            .orElseThrow(() ->
+                                    new RuntimeException("Invalid or expired reset token"));
+
+            // 2. Check token expiry
+            if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Reset token has expired");
+            }
+
+            // 3. Fetch user
+            User user = userRepository.findByIdAndIsActive(resetToken.getUserId(),"Y")
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // 4. Update password (always encode)
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+
+            // 5. Revoke all active login tokens
+            userTokenRepository.revokeAllTokensByUserId(user.getId());
+
+            // 6. Mark reset token as used
+            resetToken.setUsed("Y");
+            passwordResetTokenRepository.save(resetToken);
+
+            log.info("Password reset successful for userId={}", user.getId());
+
+            return new ApiResponse<>(
+                    SUCCESS,
+                    PASSWORD_RESET_SUCCESS,
+                    HttpStatus.OK.value(),
+                    null
+            );
+
+        } catch (Exception ex) {
+            log.error("Error during reset password process", ex);
+
+            return new ApiResponse<>(
+                    FAILED,
+                    SOMETHING_WENT_WRONG,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
+        }
+    }
+
 }

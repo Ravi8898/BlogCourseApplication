@@ -3,7 +3,9 @@ package org.project.controller;
 import static org.project.constants.MessageConstants.*;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.project.dto.requestDto.ForgotPasswordRequest;
 import org.project.dto.requestDto.LoginRequest;
+import org.project.dto.requestDto.ResetPasswordRequest;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.dto.responseDto.LoginResponse;
 import org.project.dto.responseDto.RegisterResponse;
@@ -108,4 +110,41 @@ public class LoginController {
                 .status(response.getStatusCode())
                 .body(response);
     }
+
+    @Operation(summary = "Send password reset link to user's email")
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+
+        log.info("Forgot password request received");
+
+        ApiResponse<Void> response =
+                loginService.forgotPassword(request);
+
+        log.info("Forgot password flow completed with statusCode={}",
+                response.getStatusCode());
+
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+    }
+
+    @Operation(summary = "Reset password using reset token")
+    @PostMapping("/resetPassword")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+              @RequestBody ResetPasswordRequest request) {
+
+        log.info("Reset password request received");
+
+        ApiResponse<Void> response = loginService.resetPassword(request);
+
+        log.info("Reset password flow completed with statusCode={}",
+                response.getStatusCode());
+
+        return ResponseEntity
+                .status(response.getStatusCode())
+                .body(response);
+    }
+
+
 }
