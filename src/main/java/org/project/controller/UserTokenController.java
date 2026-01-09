@@ -2,11 +2,7 @@ package org.project.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
-import org.project.dto.requestDto.RegisterRequest;
-import org.project.dto.requestDto.UserTokenRequest;
 import org.project.dto.responseDto.ApiResponse;
-import org.project.dto.responseDto.RegisterResponse;
-import org.project.model.UserToken;
 import org.project.service.UserTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,8 +13,6 @@ import static org.project.constants.MessageConstants.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/userToken")
@@ -39,7 +33,6 @@ public class UserTokenController {
     @PostMapping("/revokeAllTokensByUserId")
     public ResponseEntity<ApiResponse<?>> revokeAllTokensExceptCurrentTokenByUserId(
             HttpServletRequest httpServletRequest) {
-
 
         ApiResponse<?> response =
                 userTokenService.revokeAllTokensExceptCurrentTokenByUserId(httpServletRequest);
