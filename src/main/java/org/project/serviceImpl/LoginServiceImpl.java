@@ -16,7 +16,7 @@ import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.repository.UserTokenRepository;
 import org.project.security.JwtUtil;
-import org.project.service.EmailService;
+import org.project.util.EmailUtil;
 import org.project.service.LoginService;
 import org.project.service.UserTokenService;
 import org.slf4j.Logger;
@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.javapoet.ClassName;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,7 +36,6 @@ import static org.project.constants.MessageConstants.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -78,7 +76,7 @@ public class LoginServiceImpl implements LoginService {
     private final JwtUtil jwtUtil;
     private final UserTokenService userTokenService;
 
-    private final EmailService emailService;
+    private final EmailUtil emailUtil;
 
     @Value("${frontend.reset.password.url}")
     private String resetPasswordBaseUrl;
@@ -95,7 +93,7 @@ public class LoginServiceImpl implements LoginService {
     public LoginServiceImpl(AuthenticationManager authenticationManager,
                             UserRepository userRepository, AddressRepository addressRepository,PasswordResetTokenRepository passwordResetTokenRepository,UserTokenRepository userTokenRepository,
                             PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-                            UserTokenService userTokenService,EmailService emailService) {
+                            UserTokenService userTokenService,EmailUtil emailUtil) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.addressRepository = addressRepository;
@@ -104,7 +102,7 @@ public class LoginServiceImpl implements LoginService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userTokenService = userTokenService;
-        this.emailService = emailService;
+        this.emailUtil = emailUtil;
     }
 
     /**
@@ -355,7 +353,7 @@ public class LoginServiceImpl implements LoginService {
                     + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
 
             // Send password reset email
-            emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+            emailUtil.sendPasswordResetEmail(user.getEmail(), resetLink);
 
             log.info("Password reset link sent successfully for userId={}", user.getId());
 

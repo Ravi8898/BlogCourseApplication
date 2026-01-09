@@ -1,38 +1,36 @@
-package org.project.serviceImpl;
+package org.project.util;
 
-import org.project.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * EmailService implementation responsible for sending emails.
+ * EmailUtil implementation responsible for sending emails.
  * *
- * This service uses JavaMailSender to send transactional emails.
+ * This util uses JavaMailSender to send transactional emails.
  * Currently supports sending password reset emails.
  */
-@Service
+@Component
 @Transactional
-public class EmailServiceImpl implements EmailService {
+public class EmailUtil{
 
     private final JavaMailSender mailSender;
 
-    public EmailServiceImpl(JavaMailSender mailSender) {
+    public EmailUtil(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
 
     private static final Logger log =
-            LoggerFactory.getLogger(EmailServiceImpl.class);
+            LoggerFactory.getLogger(EmailUtil.class);
     /**
      * Sends password reset email to the user.
      *
      * @param toEmail   recipient email address
      * @param resetLink password reset link containing secure token
      */
-    @Override
     public void sendPasswordResetEmail(String toEmail, String resetLink) {
 
         log.info("Preparing password reset email");
