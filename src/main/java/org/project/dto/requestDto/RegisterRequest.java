@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.project.enums.UserRole;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -21,6 +23,9 @@ public class RegisterRequest {
 
     @NotBlank
     private String lastName;
+
+    @NotNull
+    private LocalDate dateOfBirth;
 
     @Email
     @NotBlank
