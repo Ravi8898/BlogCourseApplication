@@ -85,7 +85,7 @@ public class LoginServiceImpl implements LoginService {
     private static final Logger log =
             LoggerFactory.getLogger(LoginServiceImpl.class);
 
-    private UserTokenRepository userTokenRepository;
+    private final UserTokenRepository userTokenRepository;
 
     /**
      * Constructor-based dependency injection
@@ -148,6 +148,7 @@ public class LoginServiceImpl implements LoginService {
             User user = User.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
+                    .dateOfBirth(request.getDateOfBirth())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
@@ -165,6 +166,7 @@ public class LoginServiceImpl implements LoginService {
                     savedUser.getId(),
                     savedUser.getFirstName(),
                     savedUser.getLastName(),
+                    savedUser.getDateOfBirth(),
                     savedUser.getEmail(),
                     savedUser.getPhoneNumber(),
                     savedUser.getRole(),

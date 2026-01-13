@@ -82,6 +82,7 @@ public class UserServiceImpl implements UserService {
                         user.getId(),
                         user.getFirstName(),
                         user.getLastName(),
+                        user.getDateOfBirth(),
                         user.getEmail(),
                         user.getPhoneNumber(),
                         user.getRole(),
@@ -151,6 +152,7 @@ public class UserServiceImpl implements UserService {
                                 user.getId(),
                                 user.getFirstName(),
                                 user.getLastName(),
+                                user.getDateOfBirth(),
                                 user.getEmail(),
                                 user.getPhoneNumber(),
                                 user.getRole(),
@@ -242,6 +244,9 @@ public class UserServiceImpl implements UserService {
                     user.setLastName(request.getLastName());
                 }
 
+                if (request.getDateOfBirth() !=null) {
+                    user.setDateOfBirth((request.getDateOfBirth()));
+                }
                 // Update phone number and trigger logout if changed
                 if (request.getPhoneNumber() != null &&
                         !request.getPhoneNumber().equals(user.getPhoneNumber())) {
@@ -309,6 +314,7 @@ public class UserServiceImpl implements UserService {
                         updatedUser.getId(),
                         user.getFirstName(),
                         user.getLastName(),
+                        user.getDateOfBirth(),
                         user.getEmail(),
                         user.getPhoneNumber(),
                         user.getRole(),
