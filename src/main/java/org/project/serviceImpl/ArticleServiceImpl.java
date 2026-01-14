@@ -526,7 +526,11 @@ public class ArticleServiceImpl implements ArticleService {
                         }
                     }
                 }
-
+                // Update article status if provided, else default to DRAFT
+                article.setArticleStatus(ArticleStatus.DRAFT);
+                if(request.getArticleStatus() != null) {
+                    article.setArticleStatus(ArticleStatus.valueOf(request.getArticleStatus()));
+                }
 
                 // Save updated article
                 Article updatedArticle = articleRepository.save(article);
