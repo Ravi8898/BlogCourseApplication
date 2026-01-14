@@ -8,6 +8,8 @@ import lombok.*;
 import org.project.enums.UserRole;
 import org.project.model.audit.BaseAuditEntity;
 
+import java.time.LocalDate;
+
 
 @Entity
 @Table(name = "users")
@@ -28,6 +30,9 @@ public class User extends BaseAuditEntity {
 
     @Column(nullable = false)
     private String lastName;
+
+    @Column
+    private LocalDate dateOfBirth;
 
     @Column(nullable = false)
     private String password; // NOTE: hash passwords in real apps
