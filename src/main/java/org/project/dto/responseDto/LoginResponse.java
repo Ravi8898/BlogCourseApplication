@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.project.enums.UserRole;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -16,6 +18,7 @@ public class LoginResponse {
     private String lastName;
     private String email;
     private String phoneNumber;
+    private LocalDate dateOfBirth;
     private UserRole role;
     private AddressResponse address;
     private String token;

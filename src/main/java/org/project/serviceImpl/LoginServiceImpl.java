@@ -239,7 +239,7 @@ public class LoginServiceImpl implements LoginService {
             // Prepare response DTO
             LoginResponse response = new LoginResponse(user.getId(),
                     user.getFirstName(), user.getLastName(), user.getEmail(),
-                    user.getPhoneNumber(),user.getRole(), addressResponse, token);
+                    user.getPhoneNumber(),user.getDateOfBirth(), user.getRole(), addressResponse, token);
 
             // Return success response
             log.info("Login successful for userId: {}", user.getId());
