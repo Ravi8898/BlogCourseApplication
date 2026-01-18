@@ -17,5 +17,5 @@ public interface ArticleService {
     ApiResponse<ArticleResponse> getArticleById(Long articleId);
     ApiResponse<List<ArticleResponse>> getAllArticlesByUserId(HttpServletRequest servletRequest);
 
-    ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest updateArticleRequest);
+    ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest updateArticleRequest, HttpServletRequest servletRequest);
 }

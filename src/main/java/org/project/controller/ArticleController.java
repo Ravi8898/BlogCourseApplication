@@ -152,13 +152,13 @@ public class ArticleController {
      */
     @PostMapping("/updateArticleById")
     public ResponseEntity<ApiResponse<ArticleResponse>> updateArticleById(
-            @RequestBody UpdateArticleRequest updateArticleRequest) {
+            @RequestBody UpdateArticleRequest updateArticleRequest, HttpServletRequest servletRequest) {
 
         log.info("Received request to update article: {}", updateArticleRequest);
 
         // Call service layer to update article
         ApiResponse<ArticleResponse> response =
-                articleService.updateArticleById(updateArticleRequest);
+                articleService.updateArticleById(updateArticleRequest, servletRequest);
 
         // Log response status for the update operation
         log.info("Update user response for articleId {} : {}",

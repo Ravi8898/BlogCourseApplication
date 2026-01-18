@@ -3,11 +3,9 @@ package org.project.serviceImpl;
 import static org.project.constants.MessageConstants.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.project.dto.requestDto.ArticleRequest;
-import org.project.dto.requestDto.RegisterRequest;
 import org.project.dto.requestDto.UpdateArticleRequest;
 import org.project.dto.responseDto.*;
 import org.project.enums.ArticleStatus;
-import org.project.model.Address;
 import org.project.model.Article;
 import org.project.model.User;
 import org.project.model.UserToken;
@@ -20,9 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.javapoet.ClassName;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -33,7 +29,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -458,7 +454,7 @@ public class ArticleServiceImpl implements ArticleService {
      * If content is updated, the old PDF file is deleted and a new one is created.
      */
     @Override
-    public ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest request) {
+    public ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest request, HttpServletRequest servletRequest) {
 
         log.info("updateArticleById called with request: {}", request);
 
@@ -502,34 +498,17 @@ public class ArticleServiceImpl implements ArticleService {
                     if (Files.exists(path)) {
 
                         try (PDDocument document = new PDDocument()) {
-
-                            PDPage page = new PDPage();
-                            document.addPage(page);
-
-                            try (PDPageContentStream contentStream =
-                                         new PDPageContentStream(document, page)) {
-
-                                contentStream.beginText();
-                                contentStream.setFont(PDType1Font.HELVETICA, 12);
-                                contentStream.setLeading(14.5f);
-                                contentStream.newLineAtOffset(50, 750);
-
-                                for (String line : request.getContent().split("\n")) {
-                                    contentStream.showText(line);
-                                    contentStream.newLine();
-                                }
-
-                                contentStream.endText();
-                            }
-
-                            document.save(pdfPath);
+                            createArticleFile(pdfPath, request, document);
                         }
+
                     }
                 }
                 // Update article status if provided, else default to DRAFT
                 article.setArticleStatus(ArticleStatus.DRAFT);
                 if(request.getArticleStatus() != null) {
-                    article.setArticleStatus(ArticleStatus.valueOf(request.getArticleStatus()));
+
+                    updateArticleStatus(servletRequest, request, article);
+
                 }
 
                 // Save updated article
@@ -572,6 +551,52 @@ public class ArticleServiceImpl implements ArticleService {
         return response;
     }
 
+    private void updateArticleStatus(HttpServletRequest servletRequest, UpdateArticleRequest request, Article article) {
+        String authHeader = servletRequest.getHeader("Authorization");
+        log.info("Authorization header received for getAllArticlesByUserId API");
 
+        // Extract JWT token by removing 'Bearer ' prefix
+        String token = authHeader.substring(7);
+        log.info("JWT token extracted successfully for getAllArticlesByUserId API");
+
+        // Fetch token details
+        Optional<UserToken> userTokenOptional =
+                userTokenRepository.findByToken(token);
+        Long userId = 0L;
+        if (userTokenOptional.isPresent()) {
+            userId = userTokenOptional.get().getUserId();
+        }
+
+        String isActive = "Y";
+        Optional<User> user = userRepository.findByIdAndIsActive(userId, isActive);
+
+        article.setArticleStatus(ArticleStatus.valueOf(request.getArticleStatus()));
+        article.setReviewedBy(user.get().getId());
+        article.setReviewedAt(LocalDateTime.now());
+    }
+
+    private void createArticleFile(String pdfPath, UpdateArticleRequest request, PDDocument document) throws IOException {
+
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            try (PDPageContentStream contentStream =
+                         new PDPageContentStream(document, page)) {
+
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA, 12);
+                contentStream.setLeading(14.5f);
+                contentStream.newLineAtOffset(50, 750);
+
+                for (String line : request.getContent().split("\n")) {
+                    contentStream.showText(line);
+                    contentStream.newLine();
+                }
+
+                contentStream.endText();
+            }
+
+            document.save(pdfPath);
+    }
 
 }
