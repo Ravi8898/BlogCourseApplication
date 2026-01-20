@@ -28,7 +28,6 @@ public class Article extends BaseAuditEntity {
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
     private String pdfPath;
 
     @Enumerated(EnumType.STRING)

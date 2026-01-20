@@ -29,6 +29,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -77,6 +78,7 @@ public class ArticleServiceImpl implements ArticleService {
      * @param servletRequest HTTP request used to extract Authorization header
      * @return ApiResponse containing created article details
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public ApiResponse<ArticleResponse> createArticle(ArticleRequest request,
                                                       HttpServletRequest servletRequest) {
@@ -144,12 +146,13 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception ex) {
             log.error("Error while creating article", ex);
 
-            return new ApiResponse<>(
-                    FAILED,
-                    ARTICLE_CREATED_FAILED,
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    null
-            );
+            throw new RuntimeException(ARTICLE_CREATED_FAILED, ex.getCause());
+//            return new ApiResponse<>(
+//                    FAILED,
+//                    ARTICLE_CREATED_FAILED,
+//                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+//                    null
+//            );
         }
     }
 
