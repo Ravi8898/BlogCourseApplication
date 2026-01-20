@@ -20,7 +20,7 @@ public class MediaController {
 
     private final ImageStorageUtil imageStorageUtil;
 
-    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/uploadImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> uploadImage(
             @RequestPart("file") MultipartFile file) {
 
