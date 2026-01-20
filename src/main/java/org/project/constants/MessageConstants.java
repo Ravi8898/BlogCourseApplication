@@ -56,4 +56,8 @@ public class MessageConstants {
     public static final String ARTICLE_NOT_FOUND = "Article not found.";
     public static final String ARTICLE_UPDATE_FAILED = "Article updation failed. Something went wrong.";
     public static final String ARTICLE_UPDATE_SUCCESS = "Profile updated successfully";
+
+    //Image upload messages
+    public static final String IMAGE_UPLOAD_SUCCESS = "Image uploaded successfully.";
+    public static final String IMAGE_UPLOAD_FAILED = "Image upload failed. Something went wrong.";
 }

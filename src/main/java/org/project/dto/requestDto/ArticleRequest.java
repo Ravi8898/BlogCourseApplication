@@ -16,7 +16,7 @@ public class ArticleRequest {
     @NotBlank
     private String description;
 
-    @NotBlank
-    private String content;
+    @NotNull
+    private ContentRequest content;
 
 }

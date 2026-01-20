@@ -17,9 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.javapoet.ClassName;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -46,21 +48,20 @@ public class ArticleController {
     @Operation(summary = "create a new article.")
     @PostMapping("/createArticle")
     public ResponseEntity<ApiResponse<ArticleResponse>> createArticle(
-            @RequestBody ArticleRequest request, HttpServletRequest servletRequest) {
-        log.info("Create Article API called");
-
+            @RequestBody ArticleRequest request,
+            HttpServletRequest servletRequest) {
 
         // Delegate article creation to service layer
-        ApiResponse<ArticleResponse> response = articleService.createArticle(request, servletRequest);
-        log.info("Create Article API completed with statusCode={}",
-                response.getStatusCode());
+        ApiResponse<ArticleResponse> response =
+                articleService.createArticle(request, servletRequest);
 
+        log.info("Create Article API completed with statusCode={}", response.getStatusCode());
         // Return HTTP response with status and body from service
         return ResponseEntity
                 .status(response.getStatusCode())
                 .body(response);
-
     }
+
     /**
      * @return ResponseEntity containing ApiResponse with List of ArticleResponse
      */
@@ -152,23 +153,15 @@ public class ArticleController {
      */
     @PostMapping("/updateArticleById")
     public ResponseEntity<ApiResponse<ArticleResponse>> updateArticleById(
-            @RequestBody UpdateArticleRequest updateArticleRequest, HttpServletRequest servletRequest) {
+            @RequestBody UpdateArticleRequest request,
+            HttpServletRequest servletRequest) {
 
-        log.info("Received request to update article: {}", updateArticleRequest);
-
-        // Call service layer to update article
         ApiResponse<ArticleResponse> response =
-                articleService.updateArticleById(updateArticleRequest, servletRequest);
+                articleService.updateArticleById(request, servletRequest);
 
-        // Log response status for the update operation
-        log.info("Update user response for articleId {} : {}",
-                updateArticleRequest.getArticleId(), response.getStatus());
-
-        // Return response with appropriate HTTP status
         return ResponseEntity
                 .status(response.getStatusCode())
                 .body(response);
     }
-
 
 }

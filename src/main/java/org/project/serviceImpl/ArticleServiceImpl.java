@@ -2,17 +2,23 @@ package org.project.serviceImpl;
 
 import static org.project.constants.MessageConstants.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.coyote.BadRequestException;
 import org.project.dto.requestDto.ArticleRequest;
+import org.project.dto.requestDto.SectionRequest;
 import org.project.dto.requestDto.UpdateArticleRequest;
 import org.project.dto.responseDto.*;
 import org.project.enums.ArticleStatus;
 import org.project.model.Article;
+import org.project.model.ArticleSection;
 import org.project.model.User;
 import org.project.model.UserToken;
 import org.project.repository.ArticleRepository;
+import org.project.repository.ArticleSectionRepository;
 import org.project.repository.UserRepository;
 import org.project.repository.UserTokenRepository;
 import org.project.service.ArticleService;
+import org.project.util.ImageStorageUtil;
+import org.project.util.PdfGeneratorUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +29,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
@@ -30,8 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class ArticleServiceImpl implements ArticleService {
@@ -45,6 +51,15 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Autowired
     private UserTokenRepository userTokenRepository;
+
+    @Autowired
+    private ArticleSectionRepository articleSectionRepository;
+
+    @Autowired
+    private ImageStorageUtil imageStorageUtil;
+
+    @Autowired
+    private PdfGeneratorUtil pdfGeneratorUtil;
 
     @Value("${article.file.upload.path}")
     private String articleUploadPath;
@@ -63,87 +78,72 @@ public class ArticleServiceImpl implements ArticleService {
      * @return ApiResponse containing created article details
      */
     @Override
-    public ApiResponse<ArticleResponse> createArticle(ArticleRequest request, HttpServletRequest servletRequest) {
+    public ApiResponse<ArticleResponse> createArticle(ArticleRequest request,
+                                                      HttpServletRequest servletRequest) {
 
-        log.info("Create Article service started");
         try {
-
-
+            // 1. Extract JWT token
             String authHeader = servletRequest.getHeader("Authorization");
-            log.info("Authorization header received");
-
-            // Extract JWT token by removing 'Bearer ' prefix
             String token = authHeader.substring(7);
-            log.info("JWT token extracted successfully");
 
-            // Fetch token details
-            Optional<UserToken> userTokenOptional =
-                    userTokenRepository.findByToken(token);
+            Optional<UserToken> userTokenOptional = userTokenRepository.findByToken(token);
 
-            Long authorId = 0L;
+            Long authorId = userTokenOptional
+                    .map(UserToken::getUserId)
+                    .orElseThrow(() -> new RuntimeException("Invalid JWT token"));
 
-            // If token exists, extract userId as authorId
-            if(userTokenOptional.isPresent())
-            {
-                authorId = userTokenOptional.get().getUserId();
-                log.info("Author identified with userId={}", authorId);
-            }
+            log.info("Author identified with userId={}", authorId);
 
-            // Save article content to file system and get file path
-            log.info("Saving article content to file for authorId={}", authorId);
-            String filePath = saveContentToFile(
-                    request.getContent(),
-                    authorId
-            );
-            log.info("Article content saved successfully at path={}", filePath);
-
+            // 2. Save article metadata
             Article article = Article.builder()
                     .title(request.getTitle())
                     .description(request.getDescription())
-                    .pdfPath(filePath)
                     .articleStatus(ArticleStatus.DRAFT)
                     .authorId(authorId)
                     .isActive("Y")
                     .build();
 
-            // Save article to database
             Article savedArticle = articleRepository.save(article);
-            log.info("Article persisted successfully with id={}", savedArticle.getId());
 
-            // Prepare response DTO
-            ArticleResponse response = new ArticleResponse(
-                    savedArticle.getId(),
-                    savedArticle.getTitle(),
-                    savedArticle.getDescription(),
-                    savedArticle.getPdfPath(),
-                    savedArticle.getArticleStatus(),
-                    savedArticle.getAuthorId(),
-                    savedArticle.getReviewMessage(),
-                    savedArticle.getReviewedBy(),
-                    savedArticle.getReviewedAt()
-            );
-            log.info("Create Article service completed successfully");
-            ;
+            // 3. Save sections
+            int position = 1;
+            List<ArticleSection> savedSections = new ArrayList<>();
+
+            for (Map.Entry<String, SectionRequest> entry :
+                    request.getContent().getSections().entrySet()) {
+
+                String sectionKey = entry.getKey();
+                SectionRequest sectionRequest = entry.getValue();
+
+                ArticleSection section = new ArticleSection();
+                section.setArticle(savedArticle);
+                section.setSectionKey(sectionKey);
+                section.setExplanation(sectionRequest.getExplanation());
+                section.setImageUrl(sectionRequest.getImageUrl()); // already uploaded
+                section.setPosition(position++);
+
+                savedSections.add(articleSectionRepository.save(section));
+            }
+
+            // 4. Generate PDF from sections
+            String pdfPath = pdfGeneratorUtil.generateOrUpdatePdf(savedArticle, savedSections);
+            savedArticle.setPdfPath(pdfPath);
+
+            articleRepository.save(savedArticle);
+
+            // 5. Prepare response
+            ArticleResponse response = mapToResponse(savedArticle, savedSections);
 
             return new ApiResponse<>(
                     SUCCESS,
                     ARTICLE_CREATED_SUCCESS,
                     HttpStatus.CREATED.value(),
                     response
+            );
 
-            );
-        }
-        catch (IOException ioEx){
-            log.error("Error while creating article", ioEx);
-            return new ApiResponse<>(
-                    FAILED,
-                    ARTICLE_FILE_SAVE_FAILED,
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    null
-            );
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             log.error("Error while creating article", ex);
+
             return new ApiResponse<>(
                     FAILED,
                     ARTICLE_CREATED_FAILED,
@@ -151,6 +151,36 @@ public class ArticleServiceImpl implements ArticleService {
                     null
             );
         }
+    }
+
+    private ArticleResponse mapToResponse(Article article, List<ArticleSection> sections) {
+
+        Map<String, SectionResponse> sectionMap = new LinkedHashMap<>();
+
+        for (ArticleSection section : sections) {
+            sectionMap.put(
+                    section.getSectionKey(),
+                    new SectionResponse(
+                            section.getExplanation(),
+                            section.getImageUrl()
+                    )
+            );
+        }
+
+        ContentResponse content = new ContentResponse(sectionMap);
+
+        return new ArticleResponse(
+                article.getId(),
+                article.getTitle(),
+                article.getDescription(),
+                article.getPdfPath(),
+                article.getArticleStatus(),
+                article.getAuthorId(),
+                article.getReviewMessage(),
+                article.getReviewedBy(),
+                article.getReviewedAt(),
+                content
+        );
     }
 
     /**
@@ -162,66 +192,66 @@ public class ArticleServiceImpl implements ArticleService {
      * @return Path of the saved file as String
      * @throws IOException if file creation or write fails
      */
-    private String saveContentToFile(String content, Long authorId) throws IOException {
-
-        try {
-            log.info("Starting file save operation for authorId={}", authorId);
-
-            // Base directory where article files are stored
-            Files.createDirectories(Paths.get(articleUploadPath));
-            log.info("Verified/created base directory: {}", articleUploadPath);
-
-            // Generate unique file name using authorId and timestamp
-            String fileName = "Article_" + authorId + "_" + System.currentTimeMillis() + ".pdf";
-            Path filePath = Paths.get(articleUploadPath, fileName);
-
-            // Write content to file
-            try (PDDocument document = new PDDocument()) {
-
-                log.info("Starting PDF generation for authorId={}", authorId);
-
-                PDPage page = new PDPage();
-                document.addPage(page);
-
-                // Create content stream to write text into the PDF page
-                try (PDPageContentStream contentStream =
-                             new PDPageContentStream(document, page)) {
-
-                    log.info("PDF content stream opened");
-
-                    //starts adding text
-                    contentStream.beginText();
-
-                    // Set font and font size
-                    contentStream.setFont(PDType1Font.HELVETICA, 12);
-
-                    //line spacing
-                    contentStream.setLeading(14.5f);
-
-                    // Set starting position
-                    contentStream.newLineAtOffset(50, 750);
-
-                    log.debug("Writing article content into PDF");
-
-                    // Write content line by line to support multi-line text
-                    for (String line : content.split("\n")) {
-                        contentStream.showText(line);
-                        contentStream.newLine();
-                    }
-                    contentStream.endText();
-                }
-
-                // Save the PDF document to the file system
-                document.save(filePath.toFile());
-            }
-            log.info("File written successfully: {}", filePath);
-
-            return filePath.toString();
-        } catch (IOException ex) {
-            log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
-            throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
-        }
-    }
+//    private String saveContentToFile(String content, Long authorId) throws IOException {
+//
+//        try {
+//            log.info("Starting file save operation for authorId={}", authorId);
+//
+//            // Base directory where article files are stored
+//            Files.createDirectories(Paths.get(articleUploadPath));
+//            log.info("Verified/created base directory: {}", articleUploadPath);
+//
+//            // Generate unique file name using authorId and timestamp
+//            String fileName = "Article_" + authorId + "_" + System.currentTimeMillis() + ".pdf";
+//            Path filePath = Paths.get(articleUploadPath, fileName);
+//
+//            // Write content to file
+//            try (PDDocument document = new PDDocument()) {
+//
+//                log.info("Starting PDF generation for authorId={}", authorId);
+//
+//                PDPage page = new PDPage();
+//                document.addPage(page);
+//
+//                // Create content stream to write text into the PDF page
+//                try (PDPageContentStream contentStream =
+//                             new PDPageContentStream(document, page)) {
+//
+//                    log.info("PDF content stream opened");
+//
+//                    //starts adding text
+//                    contentStream.beginText();
+//
+//                    // Set font and font size
+//                    contentStream.setFont(PDType1Font.HELVETICA, 12);
+//
+//                    //line spacing
+//                    contentStream.setLeading(14.5f);
+//
+//                    // Set starting position
+//                    contentStream.newLineAtOffset(50, 750);
+//
+//                    log.debug("Writing article content into PDF");
+//
+//                    // Write content line by line to support multi-line text
+//                    for (String line : content.split("\n")) {
+//                        contentStream.showText(line);
+//                        contentStream.newLine();
+//                    }
+//                    contentStream.endText();
+//                }
+//
+//                // Save the PDF document to the file system
+//                document.save(filePath.toFile());
+//            }
+//            log.info("File written successfully: {}", filePath);
+//
+//            return filePath.toString();
+//        } catch (IOException ex) {
+//            log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
+//            throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
+//        }
+//    }
 
     /**
      * Fetch all active articles.
@@ -232,11 +262,12 @@ public class ArticleServiceImpl implements ArticleService {
         log.info("getAllArticles method called");
 
         ApiResponse<List<ArticleResponse>> response;
+
         try {
             // Fetch all active articles
             List<Article> articleList = articleRepository.findByIsActive("Y");
 
-            log.info("Articles fetched from repository: {}", articleList);
+            log.info("Articles fetched from repository: {}", articleList.size());
 
             if (articleList.isEmpty()) {
                 log.info("No active articles found");
@@ -248,27 +279,47 @@ public class ArticleServiceImpl implements ArticleService {
                 );
             }
 
-            // Map each article entity to response DTO
+            // Map each article entity to response DTO with sections
             List<ArticleResponse> articleResponses = articleList.stream()
                     .map(article -> {
 
-                                return new ArticleResponse(
-                                        article.getId(),
-                                        article.getTitle(),
-                                        article.getDescription(),
-                                        article.getPdfPath(),
-                                        article.getArticleStatus(),
-                                        article.getAuthorId(),
-                                        article.getReviewMessage(),
-                                        article.getReviewedBy(),
-                                        article.getReviewedAt()
-                                );
-                            }
-                    ).toList();
+                        // Fetch sections for this article
+                        List<ArticleSection> sections =
+                                articleSectionRepository.findByArticleIdOrderByPosition(article.getId());
 
-            log.info("Successfully mapped {} List of articles to List of ArticleResponse", articleResponses.size());
+                        // Build section map
+                        Map<String, SectionResponse> sectionMap = new LinkedHashMap<>();
 
-            response = new ApiResponse<List<ArticleResponse>>(
+                        for (ArticleSection section : sections) {
+                            sectionMap.put(
+                                    section.getSectionKey(),
+                                    new SectionResponse(
+                                            section.getExplanation(),
+                                            section.getImageUrl()
+                                    )
+                            );
+                        }
+
+                        ContentResponse content = new ContentResponse(sectionMap);
+
+                        return new ArticleResponse(
+                                article.getId(),
+                                article.getTitle(),
+                                article.getDescription(),
+                                article.getPdfPath(),
+                                article.getArticleStatus(),
+                                article.getAuthorId(),
+                                article.getReviewMessage(),
+                                article.getReviewedBy(),
+                                article.getReviewedAt(),
+                                content
+                        );
+                    })
+                    .toList();
+
+            log.info("Successfully mapped {} articles to ArticleResponse list", articleResponses.size());
+
+            response = new ApiResponse<>(
                     SUCCESS,
                     FETCH_ARTICLE_SUCCESS,
                     HttpStatus.OK.value(),
@@ -286,6 +337,7 @@ public class ArticleServiceImpl implements ArticleService {
                     null
             );
         }
+
         return response;
     }
 
@@ -315,7 +367,28 @@ public class ArticleServiceImpl implements ArticleService {
                 Article article = articleOptional.get();
                 log.info("Article found for articleId={}", articleId);
 
-                // Map Article entity to ArticleResponse DTO
+                // Fetch sections for this article
+                List<ArticleSection> sections =
+                        articleSectionRepository.findByArticleIdOrderByPosition(articleId);
+
+                log.info("Fetched {} sections for articleId={}", sections.size(), articleId);
+
+                // Build section map
+                Map<String, SectionResponse> sectionMap = new LinkedHashMap<>();
+
+                for (ArticleSection section : sections) {
+                    sectionMap.put(
+                            section.getSectionKey(),
+                            new SectionResponse(
+                                    section.getExplanation(),
+                                    section.getImageUrl()
+                            )
+                    );
+                }
+
+                ContentResponse content = new ContentResponse(sectionMap);
+
+                // Build response DTO
                 ArticleResponse articleResponse = new ArticleResponse(
                         article.getId(),
                         article.getTitle(),
@@ -325,26 +398,42 @@ public class ArticleServiceImpl implements ArticleService {
                         article.getAuthorId(),
                         article.getReviewMessage(),
                         article.getReviewedBy(),
-                        article.getReviewedAt()
+                        article.getReviewedAt(),
+                        content
                 );
 
                 log.info("ArticleResponse prepared successfully for articleId={}", articleId);
 
                 response = new ApiResponse<>(
-                        SUCCESS, FETCH_ARTICLE_SUCCESS, HttpStatus.OK.value(), articleResponse
+                        SUCCESS,
+                        FETCH_ARTICLE_SUCCESS,
+                        HttpStatus.OK.value(),
+                        articleResponse
                 );
             } else {
                 // Article not found
                 log.info("No article found for articleId={}", articleId);
-                response = new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
+                response = new ApiResponse<>(
+                        FAILED,
+                        ARTICLE_NOT_FOUND,
+                        HttpStatus.NOT_FOUND.value(),
+                        null
+                );
             }
         } catch (Exception ex) {
             // Handle unexpected exceptions
             log.error("Exception occurred while fetching article by articleId={}", articleId, ex);
-            response = new ApiResponse<>(FAILED, SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);
+            response = new ApiResponse<>(
+                    FAILED,
+                    SOMETHING_WENT_WRONG,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
+            );
         }
+
         // Log method exit
         log.info("getArticleById service completed for articleId={}", articleId);
+
         return response;
     }
 
@@ -364,7 +453,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         ApiResponse<List<ArticleResponse>> response;
 
-        try{
+        try {
             String authHeader = servletRequest.getHeader("Authorization");
             log.info("Authorization header received for getAllArticlesByUserId API");
 
@@ -373,12 +462,11 @@ public class ArticleServiceImpl implements ArticleService {
             log.info("JWT token extracted successfully for getAllArticlesByUserId API");
 
             // Fetch token details
-            Optional<UserToken> userTokenOptional =
-                    userTokenRepository.findByToken(token);
+            Optional<UserToken> userTokenOptional = userTokenRepository.findByToken(token);
 
             Long authorId = null;
 
-            // // If token exists, extract userId as authorId
+            // If token exists, extract userId as authorId
             if (userTokenOptional.isPresent()) {
                 authorId = userTokenOptional.get().getUserId();
                 log.info("Author identified with userId={} for getAllArticlesByUserId API", authorId);
@@ -393,11 +481,11 @@ public class ArticleServiceImpl implements ArticleService {
                         null
                 );
             }
-            String isActive= "Y";
+
+            String isActive = "Y";
             List<Article> userArticleList = articleRepository.findByAuthorIdAndIsActive(authorId, isActive);
 
-            if(userArticleList.isEmpty()){
-
+            if (userArticleList.isEmpty()) {
                 log.info("No active articles found for userId={}", authorId);
                 return new ApiResponse<>(
                         SUCCESS,
@@ -407,11 +495,30 @@ public class ArticleServiceImpl implements ArticleService {
                 );
             }
 
-            // Map each article entity of the user to response DTO
-            List<ArticleResponse> articleResponse = userArticleList.stream()
-                    .map( article -> {
+            // Map each article entity of the user to CMS-style response DTO
+            List<ArticleResponse> articleResponses = userArticleList.stream()
+                    .map(article -> {
 
-                                return new ArticleResponse(
+                        // Fetch sections for this article
+                        List<ArticleSection> sections =
+                                articleSectionRepository.findByArticleIdOrderByPosition(article.getId());
+
+                        // Build section map
+                        Map<String, SectionResponse> sectionMap = new LinkedHashMap<>();
+
+                        for (ArticleSection section : sections) {
+                            sectionMap.put(
+                                    section.getSectionKey(),
+                                    new SectionResponse(
+                                            section.getExplanation(),
+                                            section.getImageUrl()
+                                    )
+                            );
+                        }
+
+                        ContentResponse content = new ContentResponse(sectionMap);
+
+                        return new ArticleResponse(
                                 article.getId(),
                                 article.getTitle(),
                                 article.getDescription(),
@@ -420,21 +527,22 @@ public class ArticleServiceImpl implements ArticleService {
                                 article.getAuthorId(),
                                 article.getReviewMessage(),
                                 article.getReviewedBy(),
-                                article.getReviewedAt()
-                                );
-                    }
-                    ).toList();
+                                article.getReviewedAt(),
+                                content
+                        );
+                    })
+                    .toList();
 
-            log.info("Successfully mapped {} List of articles of a user", articleResponse.size());
+            log.info("Successfully mapped {} List of articles of a user", articleResponses.size());
 
-            response= new ApiResponse<>(
+            response = new ApiResponse<>(
                     SUCCESS,
                     FETCH_ARTICLE_SUCCESS,
                     HttpStatus.OK.value(),
-                    articleResponse
+                    articleResponses
             );
-        }
-        catch (Exception ex){
+
+        } catch (Exception ex) {
             log.error("Error while fetching articles", ex);
 
             response = new ApiResponse<>(
@@ -454,110 +562,111 @@ public class ArticleServiceImpl implements ArticleService {
      * If content is updated, the old PDF file is deleted and a new one is created.
      */
     @Override
-    public ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest request, HttpServletRequest servletRequest) {
+    public ApiResponse<ArticleResponse> updateArticleById(UpdateArticleRequest request,
+                                                          HttpServletRequest servletRequest) {
 
         log.info("updateArticleById called with request: {}", request);
 
-        // Validate articleId
         if (request.getArticleId() == null) {
-            return new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.BAD_REQUEST.value(), null);
+            return new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND,
+                    HttpStatus.BAD_REQUEST.value(), null);
         }
 
-        ApiResponse<ArticleResponse> response;
-
         try {
-            String isActive = "Y";
-
-            // Fetch active article for update
             Optional<Article> articleOptional =
-                    articleRepository.findByIdAndIsActive(
-                            request.getArticleId(), isActive
-                    );
+                    articleRepository.findByIdAndIsActive(request.getArticleId(), "Y");
 
-            log.info("Article fetched for update: {}", articleOptional);
-
-            if (articleOptional.isPresent()) {
-
-                Article article = articleOptional.get();
-                log.info("Existing article before update: {}", article);
-
-                // Update only provided fields
-                if (request.getTitle() != null) {
-                    article.setTitle(request.getTitle());
-                }
-
-                if (request.getDescription() != null) {
-                    article.setDescription(request.getDescription());
-                }
-
-                if (request.getContent() != null) {
-
-                    String pdfPath = article.getPdfPath();
-                    Path path = Paths.get(pdfPath);
-
-                    if (Files.exists(path)) {
-
-                        try (PDDocument document = new PDDocument()) {
-                            createArticleFile(pdfPath, request, document);
-                        }
-
-                    }
-                }
-                // Update article status if provided, else default to DRAFT
-                article.setArticleStatus(ArticleStatus.DRAFT);
-                if(request.getArticleStatus() != null) {
-
-                    updateArticleStatus(servletRequest, request, article);
-
-                }
-
-                // Save updated article
-                Article updatedArticle = articleRepository.save(article);
-                log.info("Article updated and saved in database: {}", updatedArticle);
-
-                ArticleResponse articleResponse = new ArticleResponse(
-                        updatedArticle.getId(),
-                        updatedArticle.getTitle(),
-                        updatedArticle.getDescription(),
-                        updatedArticle.getPdfPath(),
-                        updatedArticle.getArticleStatus(),
-                        updatedArticle.getAuthorId(),
-                        updatedArticle.getReviewMessage(),
-                        updatedArticle.getReviewedBy(),
-                        updatedArticle.getReviewedAt()
-                );
-
-                response = new ApiResponse<>(SUCCESS, ARTICLE_UPDATE_SUCCESS, HttpStatus.OK.value(), articleResponse);
-
-            } else {
-                // Article not found or inactive
-                log.info("Article not found for update, articleId: {}", request.getArticleId());
-                response = new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND, HttpStatus.NOT_FOUND.value(), null);
+            if (articleOptional.isEmpty()) {
+                return new ApiResponse<>(FAILED, ARTICLE_NOT_FOUND,
+                        HttpStatus.NOT_FOUND.value(), null);
             }
 
-        } catch (IOException ex) {
-            // File handling error during content update
-            log.error("Error while updating article PDF", ex);
-            response = new ApiResponse<>(FAILED, ARTICLE_FILE_SAVE_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null
+            Article article = articleOptional.get();
+
+            boolean contentUpdated = false;
+
+            // Update only if not null
+            if (request.getTitle() != null) {
+                article.setTitle(request.getTitle());
+            }
+
+            if (request.getDescription() != null) {
+                article.setDescription(request.getDescription());
+            }
+
+            // Update sections only if content is provided
+            List<ArticleSection> savedSections = null;
+
+            if (request.getContent() != null && request.getContent().getSections() != null) {
+                contentUpdated = true;
+
+                // Delete old sections
+                articleSectionRepository.deleteByArticleId(article.getId());
+
+                savedSections = new ArrayList<>();
+                int position = 1;
+
+                for (Map.Entry<String, SectionRequest> entry :
+                        request.getContent().getSections().entrySet()) {
+
+                    ArticleSection section = new ArticleSection();
+                    section.setArticle(article);
+                    section.setSectionKey(entry.getKey());
+                    section.setExplanation(entry.getValue().getExplanation());
+                    section.setImageUrl(entry.getValue().getImageUrl());
+                    section.setPosition(position++);
+
+                    savedSections.add(articleSectionRepository.save(section));
+                }
+            }
+
+            // Regenerate PDF only if content changed
+            if (contentUpdated) {
+                String pdfPath = pdfGeneratorUtil.generateOrUpdatePdf(article, savedSections);
+                article.setPdfPath(pdfPath);
+            }
+
+            // Update status only if provided
+            if (request.getArticleStatus() != null) {
+                updateArticleStatus(servletRequest, request, article);
+            }
+
+            // Save updated article
+            Article updatedArticle = articleRepository.save(article);
+
+            // If content was not updated, load existing sections
+            if (!contentUpdated) {
+                savedSections = articleSectionRepository
+                        .findByArticleIdOrderByPosition(article.getId());
+            }
+
+            ArticleResponse response = mapToResponse(updatedArticle, savedSections);
+
+            return new ApiResponse<>(
+                    SUCCESS,
+                    ARTICLE_UPDATE_SUCCESS,
+                    HttpStatus.OK.value(),
+                    response
             );
 
         } catch (Exception ex) {
-            // Unexpected error during article update
             log.error("Error while updating article", ex);
-            response = new ApiResponse<>(FAILED, ARTICLE_UPDATE_FAILED, HttpStatus.INTERNAL_SERVER_ERROR.value(), null
+            return new ApiResponse<>(
+                    FAILED,
+                    ARTICLE_UPDATE_FAILED,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null
             );
         }
-
-        return response;
     }
 
     private void updateArticleStatus(HttpServletRequest servletRequest, UpdateArticleRequest request, Article article) {
         String authHeader = servletRequest.getHeader("Authorization");
-        log.info("Authorization header received for getAllArticlesByUserId API");
+        log.info("Authorization header received for getAllArticlesByUserId API {}", authHeader);
 
         // Extract JWT token by removing 'Bearer ' prefix
         String token = authHeader.substring(7);
-        log.info("JWT token extracted successfully for getAllArticlesByUserId API");
+        log.info("JWT token extracted successfully for getAllArticlesByUserId API {}", token);
 
         // Fetch token details
         Optional<UserToken> userTokenOptional =
@@ -570,33 +679,9 @@ public class ArticleServiceImpl implements ArticleService {
         String isActive = "Y";
         Optional<User> user = userRepository.findByIdAndIsActive(userId, isActive);
 
-        article.setArticleStatus(ArticleStatus.valueOf(request.getArticleStatus()));
-        article.setReviewedBy(user.get().getId());
+        article.setArticleStatus(ArticleStatus.valueOf(String.valueOf(request.getArticleStatus())));
+        user.ifPresent(value -> article.setReviewedBy(value.getId()));
         article.setReviewedAt(LocalDateTime.now());
-    }
-
-    private void createArticleFile(String pdfPath, UpdateArticleRequest request, PDDocument document) throws IOException {
-
-            PDPage page = new PDPage();
-            document.addPage(page);
-
-            try (PDPageContentStream contentStream =
-                         new PDPageContentStream(document, page)) {
-
-                contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA, 12);
-                contentStream.setLeading(14.5f);
-                contentStream.newLineAtOffset(50, 750);
-
-                for (String line : request.getContent().split("\n")) {
-                    contentStream.showText(line);
-                    contentStream.newLine();
-                }
-
-                contentStream.endText();
-            }
-
-            document.save(pdfPath);
     }
 
 }
