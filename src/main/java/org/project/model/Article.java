@@ -6,6 +6,7 @@ import org.project.enums.ArticleStatus;
 import org.project.model.audit.BaseAuditEntity;
 
 import java.time.LocalDateTime;
+import java.util.*;
 
 @Entity
 @Table(name = "article")
@@ -27,7 +28,6 @@ public class Article extends BaseAuditEntity {
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
     private String pdfPath;
 
     @Enumerated(EnumType.STRING)
@@ -44,7 +44,9 @@ public class Article extends BaseAuditEntity {
 
     private LocalDateTime reviewedAt;
 
-    public String Content;
-
     private String isActive;
+
+    // Optional: mapping to sections
+    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ArticleSection> sections = new ArrayList<>();
 }

@@ -23,4 +23,7 @@ public class ArticleResponse {
     private String reviewMessage;
     private Long reviewedBy;
     private LocalDateTime reviewedAt;
+    // CMS-style content
+    private ContentResponse content;
 }
+

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.project.enums.ArticleStatus;
 
 @Getter
 @Setter
@@ -13,9 +14,15 @@ import lombok.Setter;
 public class UpdateArticleRequest {
 
     private Long articleId;
-    private String title;
-    private String description;
-    private String content;
-    private String articleStatus;
 
+    private String title;
+
+    private String description;
+
+    // structured CMS-style content
+    private ContentRequest content;
+
+    // use enum, not String
+    private ArticleStatus articleStatus;
 }
+
