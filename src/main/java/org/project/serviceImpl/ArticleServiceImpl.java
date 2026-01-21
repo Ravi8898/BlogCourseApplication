@@ -62,10 +62,6 @@ public class ArticleServiceImpl implements ArticleService {
     @Autowired
     private PdfGeneratorUtil pdfGeneratorUtil;
 
-    @Value("${article.file.upload.path}")
-    private String articleUploadPath;
-
-
     private static final Logger log =
             LoggerFactory.getLogger(ArticleServiceImpl.class);
 
@@ -185,76 +181,6 @@ public class ArticleServiceImpl implements ArticleService {
                 content
         );
     }
-
-    /**
-     * Saves article content to a file on the server and returns the file path.
-     * The file name contains authorId and timestamp for uniqueness.
-     *
-     * @param content  Article content sent by user
-     * @param authorId ID of the author creating the article
-     * @return Path of the saved file as String
-     * @throws IOException if file creation or write fails
-     */
-//    private String saveContentToFile(String content, Long authorId) throws IOException {
-//
-//        try {
-//            log.info("Starting file save operation for authorId={}", authorId);
-//
-//            // Base directory where article files are stored
-//            Files.createDirectories(Paths.get(articleUploadPath));
-//            log.info("Verified/created base directory: {}", articleUploadPath);
-//
-//            // Generate unique file name using authorId and timestamp
-//            String fileName = "Article_" + authorId + "_" + System.currentTimeMillis() + ".pdf";
-//            Path filePath = Paths.get(articleUploadPath, fileName);
-//
-//            // Write content to file
-//            try (PDDocument document = new PDDocument()) {
-//
-//                log.info("Starting PDF generation for authorId={}", authorId);
-//
-//                PDPage page = new PDPage();
-//                document.addPage(page);
-//
-//                // Create content stream to write text into the PDF page
-//                try (PDPageContentStream contentStream =
-//                             new PDPageContentStream(document, page)) {
-//
-//                    log.info("PDF content stream opened");
-//
-//                    //starts adding text
-//                    contentStream.beginText();
-//
-//                    // Set font and font size
-//                    contentStream.setFont(PDType1Font.HELVETICA, 12);
-//
-//                    //line spacing
-//                    contentStream.setLeading(14.5f);
-//
-//                    // Set starting position
-//                    contentStream.newLineAtOffset(50, 750);
-//
-//                    log.debug("Writing article content into PDF");
-//
-//                    // Write content line by line to support multi-line text
-//                    for (String line : content.split("\n")) {
-//                        contentStream.showText(line);
-//                        contentStream.newLine();
-//                    }
-//                    contentStream.endText();
-//                }
-//
-//                // Save the PDF document to the file system
-//                document.save(filePath.toFile());
-//            }
-//            log.info("File written successfully: {}", filePath);
-//
-//            return filePath.toString();
-//        } catch (IOException ex) {
-//            log.error("Failed to save article content to PDF for authorId={}", authorId, ex);
-//            throw new IOException(ARTICLE_FILE_SAVE_FAILED, ex);
-//        }
-//    }
 
     /**
      * Fetch all active articles.
