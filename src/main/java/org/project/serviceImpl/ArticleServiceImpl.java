@@ -62,10 +62,6 @@ public class ArticleServiceImpl implements ArticleService {
     @Autowired
     private PdfGeneratorUtil pdfGeneratorUtil;
 
-    @Value("${article.file.upload.path}")
-    private String articleUploadPath;
-
-
     private static final Logger log =
             LoggerFactory.getLogger(ArticleServiceImpl.class);
 

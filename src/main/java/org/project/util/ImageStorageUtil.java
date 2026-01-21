@@ -15,6 +15,9 @@ public class ImageStorageUtil {
     @Value("${article.image.upload.path}")
     private String imageUploadPath;
 
+    @Value("${image.base.dir}")
+    private String imageBaseDir;
+
     public String store(MultipartFile file) throws IOException {
 
         Files.createDirectories(Paths.get(imageUploadPath));
@@ -24,8 +27,8 @@ public class ImageStorageUtil {
 
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        log.info("Image saved locally at: {}", filePath);
+        log.info("Image saved locally at: {}", imageBaseDir+imageUploadPath+fileName);
 
-        return filePath.toString();   // store this in DB
+        return imageBaseDir+imageUploadPath+fileName;   // store this in DB
     }
 }
