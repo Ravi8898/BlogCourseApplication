@@ -24,5 +24,7 @@ public class UpdateArticleRequest {
 
     // use enum, not String
     private ArticleStatus articleStatus;
+
+    private String isActive;
 }
 
