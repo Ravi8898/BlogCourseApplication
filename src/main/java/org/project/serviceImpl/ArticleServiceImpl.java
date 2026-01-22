@@ -514,6 +514,10 @@ public class ArticleServiceImpl implements ArticleService {
 
             boolean contentUpdated = false;
 
+            if ("N".equalsIgnoreCase(request.getIsActive())) {
+                article.setIsActive("N");
+            }
+
             // Update only if not null
             if (request.getTitle() != null) {
                 article.setTitle(request.getTitle());
