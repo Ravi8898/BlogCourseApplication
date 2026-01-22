@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.project.dto.responseDto.ApiResponse;
 import org.project.util.ImageStorageUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,9 @@ public class MediaController {
 
     private final ImageStorageUtil imageStorageUtil;
 
+    @Value("${image.upload.path}")
+    private String imageUploadPath;
+
     @PostMapping(value = "/uploadImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(
             @RequestPart("file") MultipartFile file) {
@@ -37,8 +41,7 @@ public class MediaController {
             String imageUrl = imageStorageUtil.store(file);
 
             // 2. Build full image path
-            String imagePath = "D:/BlogCourseApplication/BlogCourseApplication/resources/uploads/article/images/"
-                    + imageUrl;
+            String imagePath = imageUploadPath + imageUrl;
 
             // 3. Read image bytes
             byte[] imageBytes = Files.readAllBytes(Paths.get(imagePath));
