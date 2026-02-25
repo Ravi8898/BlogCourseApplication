@@ -16,6 +16,7 @@ import org.project.repository.UserRepository;
 import org.project.dto.requestDto.RegisterRequest;
 import org.project.repository.UserTokenRepository;
 import org.project.security.JwtUtil;
+import org.project.util.AESUtil;
 import org.project.util.EmailUtil;
 import org.project.service.LoginService;
 import org.project.service.UserTokenService;
@@ -144,15 +145,28 @@ public class LoginServiceImpl implements LoginService {
                 log.info("No address provided, skipping address save");
             }
 
+            // Decrypt password
+            String decryptedPassword;
+
+            try {
+                decryptedPassword = AESUtil.decrypt(request.getPassword());
+                log.info("Password decrypted successfully during registration");
+            } catch (Exception e) {
+                log.error("Password decryption failed during registration", e);
+                throw new RuntimeException("Invalid encrypted password");
+            }
+
+// Hash decrypted password
+            String encodedPassword = passwordEncoder.encode(decryptedPassword);
+
             // Build User entity
             User user = User.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
                     .dateOfBirth(request.getDateOfBirth())
-                    .password(passwordEncoder.encode(request.getPassword()))
+                    .password(encodedPassword)
                     .email(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
-                    .addressId(addressId) // ✅ can be null
                     .role(request.getRole())
                     .isActive("Y")
                     .build();
@@ -191,11 +205,27 @@ public class LoginServiceImpl implements LoginService {
 
         log.info("Inside LoginServiceImpl Login request received for username: {}", request.getUsername());
 
+
         try {
+            log.info("Encrypted password received: {}", request.getPassword());
+
             // Authenticate user credentials using Spring Security
+            // Decrypt password BEFORE authentication
+            String decryptedPassword;
+
+            try {
+                decryptedPassword = AESUtil.decrypt(request.getPassword());
+                log.info("Password decrypted successfully for username: {}", request.getUsername());
+            } catch (Exception e) {
+                log.error("Password decryption failed for username: {}", request.getUsername(), e);
+                return new ApiResponse<>(FAILED, LOGIN_FAILED, HttpStatus.UNAUTHORIZED.value(), null);
+            }
+
+// ✅ Now authenticate using decrypted password
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),request.getPassword()));
+                            request.getUsername(), decryptedPassword));
+
 
             log.info("Authentication successful for username: {}", request.getUsername());
 
@@ -419,8 +449,21 @@ public class LoginServiceImpl implements LoginService {
             User user = userRepository.findByIdAndIsActive(resetToken.getUserId(),"Y")
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // Decrypt password
+            String decryptedPassword;
+
+            try {
+                decryptedPassword = AESUtil.decrypt(request.getNewPassword());
+                log.info("Password decrypted successfully during registration");
+            } catch (Exception e) {
+                log.error("Password decryption failed during registration", e);
+                throw new RuntimeException("Invalid encrypted password");
+            }
+
+// Hash decrypted password
+            String encodedPassword = passwordEncoder.encode(decryptedPassword);
             // 4. Update password (always encode)
-            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            user.setPassword(encodedPassword);
             userRepository.save(user);
 
             // 5. Revoke all active login tokens
